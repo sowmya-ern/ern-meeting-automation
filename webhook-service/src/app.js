@@ -3,7 +3,7 @@ const express = require('express');
 const { verifySignature } = require('./verify-signature');
 const { handleFirefliesWebhook } = require('./handle-webhook');
 
-function createApp({ secret, firefliesClient, notifier, seenMeetings, onProcessed }) {
+function createApp({ secret, firefliesClient, notifier, seenMeetings, meetingRouter, onProcessed }) {
     const app = express();
     app.use(express.json({ verify: (req, res, buf) => { req.rawBody = buf; } }));
 
@@ -17,7 +17,7 @@ function createApp({ secret, firefliesClient, notifier, seenMeetings, onProcesse
 
         res.status(200).send('Processing'); // Acknowledge webhook immediately
 
-        const result = await handleFirefliesWebhook(req.body, { firefliesClient, notifier, seenMeetings });
+        const result = await handleFirefliesWebhook(req.body, { firefliesClient, notifier, seenMeetings, meetingRouter });
         if (onProcessed) onProcessed(result);
     });
 

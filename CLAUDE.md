@@ -1,5 +1,10 @@
 # ERN Meeting Automation
 
+**Scope note (2026-07-02):** despite the name, this project now covers ERN's company-wide
+shift onto Claude Code — not just meetings. Meeting automation (below) was the first module;
+the company-wide staff onboarding deck and the wider Ops/Marketing/Partnerships backlog
+migration (see [CONTEXT.md](CONTEXT.md)) live here too. Name kept as-is to avoid rename churn.
+
 Hybrid meeting-workflow automation: Claude Code Cloud Routines for pre-meeting Telegram
 reminders (Google Calendar), plus a small webhook service for post-meeting Fireflies AI
 summaries (Telegram).
@@ -24,7 +29,21 @@ Domain vocabulary: [CONTEXT.md](CONTEXT.md) · Module spec: [docs/2026-07-01-SPE
   fake Fireflies/Telegram adapters — this is the "one test version": a fully runnable
   rehearsal of the whole webhook path with **no real credentials required**. Run it any time
   with `cd webhook-service && npm install && npm test`.
-- `webhook-service/` is code-complete but **not yet deployed** — no real secrets exist yet.
+- `webhook-service/` is code-complete but **not yet deployed**.
+- **Real credentials received (2026-07-02)** for Telegram + Fireflies API key, written to
+  `webhook-service/.env` (gitignored, never committed): bot token, ops-chat personal DM
+  (`495772777`, looked up via `getUpdates` — confirmed as `@sraghavan`), and 4 named
+  meeting-routing chat IDs (Bond Team, Bond<>Nebula, ERN Super Team, ERN Daily Executive
+  Standup — the last shares a chat with what was originally called "ERN Operations Main",
+  confirmed intentional). `FIREFLIES_SECRET` still blank — it's generated when the webhook
+  URL is registered on Fireflies' dashboard, which needs a deployed URL first (chicken/egg,
+  expected to arrive after the Render step).
+- **Routing extension (2026-07-02)**: the original single-`TELEGRAM_CHAT_ID` design didn't
+  anticipate per-meeting-series routing. Added `meeting-router.js` (matches Fireflies'
+  transcript `title` against an ordered, most-specific-first rule list) and reshaped
+  `notifier.js`/`handle-webhook.js` accordingly — see the 2026-07-02 revision in
+  [docs/2026-07-01-SPEC.md](docs/2026-07-01-SPEC.md). Unmatched meeting titles fall back to
+  the ops chat (`status: 'unrouted'`) instead of being silently dropped. **27/27 tests pass.**
 - CI (`.github/workflows/test.yml`, runs `npm test` on push/PR) and deploy config
   (`render.yaml`, declares the Render web service with 5 env vars marked `sync: false` so
   Render prompts for real values instead of reading them from the repo) are in place —
@@ -37,13 +56,15 @@ Domain vocabulary: [CONTEXT.md](CONTEXT.md) · Module spec: [docs/2026-07-01-SPE
 
 ## Open items before go-live
 
-1. Get real credentials: Telegram bot token + two chat IDs (team, ops), Fireflies API key +
-   webhook secret, Google Calendar MCP connector. **Deliberately deferred to last** — the
-   smoke test above proves the code works without them.
-2. Push `webhook-service/` to GitHub, deploy to Render, point Fireflies' webhook settings at
-   it, register the Cloud Routine.
-3. Run the staging checklist in the plan doc (section 5) with a test Telegram chat before
-   switching to the real team chat.
+1. Deploy `webhook-service/` to Render (repo is already pushed), enter the 6 env vars in
+   Render's dashboard (`.env` has the values for everything except `FIREFLIES_SECRET`).
+2. Register the deployed URL on Fireflies' dashboard — that's where `FIREFLIES_SECRET` gets
+   generated; add it to Render's env vars once you have it.
+3. Google Calendar MCP connector still needed for the pre-meeting routine (separate from the
+   webhook credentials — an OAuth authorization, not a token to hand over).
+4. Register the Cloud Routine (`routines/pre-meeting-reminder.md`) via `/schedule`.
+5. Run the staging checklist in the plan doc (section 5) before treating the routed chats as
+   fully live — the routing table is untested against a real Fireflies transcript title.
 
 Fireflies signature verification (`x-hub-signature`, HMAC-SHA256) is confirmed correct against
 their webhook docs — no longer an open item.

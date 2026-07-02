@@ -14,7 +14,7 @@ test('returns the summary on the first successful call', async () => {
 
   const httpPost = async () => {
     httpPostCalls += 1;
-    return { data: { data: { transcript: { summary } } } };
+    return { data: { data: { transcript: { title: 'ERN Daily Sync', summary } } } };
   };
 
   const sleep = async () => {
@@ -32,7 +32,7 @@ test('returns the summary on the first successful call', async () => {
 
   const result = await client.fetchSummary('meeting-1');
 
-  assert.deepEqual(result, summary);
+  assert.deepEqual(result, { title: 'ERN Daily Sync', ...summary });
   assert.equal(httpPostCalls, 1);
   assert.equal(sleepCalls, 0);
 });
@@ -75,9 +75,9 @@ test('does not call sleep after a successful attempt', async () => {
   const httpPost = async () => {
     httpPostCalls += 1;
     if (httpPostCalls === 1) {
-      return { data: { data: { transcript: { summary: { overview: '', action_items: '' } } } } };
+      return { data: { data: { transcript: { title: 'ERN Daily Sync', summary: { overview: '', action_items: '' } } } } };
     }
-    return { data: { data: { transcript: { summary } } } };
+    return { data: { data: { transcript: { title: 'ERN Daily Sync', summary } } } };
   };
 
   const sleep = async () => {
@@ -95,7 +95,7 @@ test('does not call sleep after a successful attempt', async () => {
 
   const result = await client.fetchSummary('meeting-3');
 
-  assert.deepEqual(result, summary);
+  assert.deepEqual(result, { title: 'ERN Daily Sync', ...summary });
   assert.equal(httpPostCalls, 2);
   assert.equal(sleepCalls, 1);
 });
