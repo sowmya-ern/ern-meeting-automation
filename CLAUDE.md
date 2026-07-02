@@ -24,8 +24,7 @@ Domain vocabulary: [CONTEXT.md](CONTEXT.md) · Module spec: [docs/2026-07-01-SPE
   fake Fireflies/Telegram adapters — this is the "one test version": a fully runnable
   rehearsal of the whole webhook path with **no real credentials required**. Run it any time
   with `cd webhook-service && npm install && npm test`.
-- `webhook-service/` is code-complete but **not yet deployed** — no real secrets exist yet,
-  nothing has been pushed to GitHub or Render.
+- `webhook-service/` is code-complete but **not yet deployed** — no real secrets exist yet.
 - CI (`.github/workflows/test.yml`, runs `npm test` on push/PR) and deploy config
   (`render.yaml`, declares the Render web service with 5 env vars marked `sync: false` so
   Render prompts for real values instead of reading them from the repo) are in place —
@@ -33,7 +32,8 @@ Domain vocabulary: [CONTEXT.md](CONTEXT.md) · Module spec: [docs/2026-07-01-SPE
 - Cloud Routine for pre-meeting reminders is **not yet created** — prompt is ready in
   `routines/pre-meeting-reminder.md`, needs to be registered via the `/schedule` skill or
   claude.ai/code/routines.
-- No GitHub remote yet. Local git repo only — nothing has been pushed anywhere.
+- **Pushed to GitHub**: [sowmya-ern/ern-meeting-automation](https://github.com/sowmya-ern/ern-meeting-automation)
+  (private). CI ran on push and passed (19/19 tests green in GitHub Actions).
 
 ## Open items before go-live
 
