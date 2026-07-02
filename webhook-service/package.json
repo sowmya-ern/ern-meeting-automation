@@ -1,0 +1,18 @@
+{
+  "name": "ern-fireflies-webhook",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Receives Fireflies AI transcription-completed webhooks and posts summaries to Telegram.",
+  "main": "index.js",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node index.js",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "axios": "^1.7.4"
+  }
+}

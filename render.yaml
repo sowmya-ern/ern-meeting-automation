@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: ern-fireflies-webhook
+    runtime: node
+    rootDir: webhook-service
+    buildCommand: npm install
+    startCommand: npm start
+    plan: free
+    envVars:
+      - key: FIREFLIES_SECRET
+        sync: false
+      - key: FIREFLIES_API_KEY
+        sync: false
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: TELEGRAM_CHAT_ID
+        sync: false
+      - key: TELEGRAM_OPS_CHAT_ID
+        sync: false

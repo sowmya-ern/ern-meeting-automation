@@ -1,0 +1,4 @@
+node_modules/
+.env
+webhook-service/.env
+.DS_Store

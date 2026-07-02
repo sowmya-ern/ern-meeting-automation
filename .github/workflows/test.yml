@@ -1,0 +1,25 @@
+name: webhook-service tests
+
+on:
+  push:
+    paths:
+      - "webhook-service/**"
+      - ".github/workflows/test.yml"
+  pull_request:
+    paths:
+      - "webhook-service/**"
+      - ".github/workflows/test.yml"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: webhook-service
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - run: npm install
+      - run: npm test
