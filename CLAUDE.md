@@ -78,20 +78,12 @@ Domain vocabulary: [CONTEXT.md](CONTEXT.md) · Module spec: [docs/2026-07-01-SPE
    9 required env vars set (`RELAY_SECRET` freshly generated via `openssl rand -hex 32`, synced
    to local `.env` too; `FIREFLIES_SECRET` and `ANTHROPIC_API_KEY` intentionally left unset —
    both optional/fallback-safe). Live URL: `https://ern-fireflies-webhook.onrender.com`.
-2. Register the deployed URL on Fireflies' dashboard — that's where you supply (not receive)
-   `FIREFLIES_SECRET`, a self-generated signing secret entered into Fireflies' webhook config
-   (`app.fireflies.ai/integrations/api/webhook`, Webhooks V2). **`FIREFLIES_SECRET` is done**
-   (set on Render 2026-07-03, confirmed working via a self-signed test request returning 200).
-   Remaining for this step: **the Webhook URL field must be the full path**,
-   `https://ern-fireflies-webhook.onrender.com/webhook/fireflies` — not the bare domain (a bare
-   domain 404s, since there's no route at `/`). **Subscribe to "Meeting Summarized" only** —
-   Webhooks V2 uses a different payload (`{ event, meeting_id, timestamp }`) and different event
-   names (`meeting.transcribed` / `meeting.summarized` / `meeting.bot_joined`) than this
-   project's original V1-shaped code assumed; this was fixed in code 2026-07-03 (see
-   CONTEXT.md's "Fireflies Webhooks V1 vs V2" entry and the SPEC.md revision) — before the fix,
-   every real delivery would have silently resolved to `{status: 'ignored'}` with no visible
-   error. "Meeting Transcribed" fires before the AI summary exists and isn't what this project
-   listens for.
+2. ~~Register the deployed URL on Fireflies' dashboard~~ **Done (2026-07-03).** Webhooks V2
+   (`app.fireflies.ai/integrations/api/webhook`), URL
+   `https://ern-fireflies-webhook.onrender.com/webhook/fireflies`, subscribed to "Meeting
+   Summarized" only, signing secret matches Render's `FIREFLIES_SECRET`. First real delivery
+   confirmed successful after fixing the V1-vs-V2 payload mismatch (see below) and the URL
+   missing its path.
 3. Register the Cloud Routine (`routines/pre-meeting-reminder.md`) via `/schedule` or
    claude.ai/code/routines, toggling on the "Google Calendar" connector — `WEBHOOK_RELAY_URL`
    is now known (`https://ern-fireflies-webhook.onrender.com`) and `RELAY_SECRET` exists; ready

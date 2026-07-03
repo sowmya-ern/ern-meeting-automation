@@ -31,8 +31,9 @@ You are an automated operations assistant. Your task is to send pre-meeting remi
    - Title contains "Bond" -> chatKey "BOND_TEAM"
    - Title contains "ERN Daily Executive Standup" -> chatKey "ERN_EXEC_STANDUP"
    - Title contains "ERN Daily Sync" -> chatKey "ERN_SUPER_TEAM"
-   - No match -> chatKey "OPS" (send there instead of dropping it; prefix the message
-     with `No routing match for meeting "<title>" — sending agenda here instead.` so a human
+   - No match -> chatKey "ERN_SUPER_TEAM" (send there instead of dropping it, so it stays
+     visible to the team rather than in a private ops DM; prefix the message with
+     `No routing match for meeting "<title>" — sending agenda here instead.` so someone
      notices and can add a rule)
 5. For each remaining matching event, draft a "Pre-Meeting Agenda" message in this exact
    structure:
@@ -45,6 +46,20 @@ You are an automated operations assistant. Your task is to send pre-meeting remi
       their open items pulled from the event description — the description is expected to
       contain notes/items already grouped or attributable per attendee; if an item's owner
       can't be determined, list it under a final "Other" section rather than guessing.
+   Style rules for the bullets, matched to how this team actually writes these by hand (see the
+   real example below) — deviating from these makes the output read as obviously AI-generated:
+   - Terse. Either a short label alone ("Dev SOP", "Nebula KOL"), or a short label + " — " +
+     a brief elaboration ("RE7 / Midas API — confirm resolved => rehash w Turtle"). Never a full
+     sentence, never explanatory prose.
+   - Don't embellish or elaborate beyond what's actually in the source event description. If a
+     note is terse in the source, keep it terse — don't pad it into a fuller sentence.
+   - Variable bullet count per attendee is normal and expected (2 for one person, 5 for
+     another) — this reflects real differences in workload, not an error to correct or a gap to
+     fill with invented items.
+   - No bold, no markdown decoration, no emoji. Plain text only, exactly like a person typing
+     quickly into Telegram — this is a deliberate contrast with the post-meeting *summary*
+     message (which does use bold for deadlines, since that one is LLM-condensed rather than
+     copied near-verbatim from source notes).
    Attendee handle mapping (kept in sync with `webhook-service/src/attendee-handles.js` — a
    Cloud Routine prompt has no code path to require() that file, so update both by hand):
    - Taweh Bey Solowii -> @tawehbeysolowii
@@ -63,37 +78,39 @@ You are an automated operations assistant. Your task is to send pre-meeting remi
 
 ### Example output (Bond Daily Standup)
 
+Refreshed 2026-07-03 from a real Bond Telegram thread — this is the actual human-posted format
+this routine is automating; note it's already scannable (short bullets, no prose), which is the
+bar the agenda format should stay at (contrast with the post-meeting *summary* path, which has
+had length problems — see ADR-0003's summarizer and the "reduce to a 2 minute read" note there).
+
 ```
 Hey guys please find here the meeting agenda for today. Please lmk if I missed any items
 @tawehbeysolowii @vinsonleow @hoaha47 @sowmyaraghavan @caitlinsarah
 Bond Agenda
 
 @tawehbeysolowii
-- RE7 / Turtle Club API — unblock LP redeployment and yield display
-- LP Tracker update - to share w GSR & Turtle
-- Recreate 0G - Bond meeting w 0G email address
+- RE7 / Midas API — confirm resolved => rehash w Turtle
+- 15 July Live timeline
+- GSR Suggestions
 
 @vinsonleow
-- Marketing Applicant questions
+- Dev SOP
 - Nebula KOL
-- Separate Marketing meeting w Ada, JC
 
 @hoaha47
-- Marketing Lead — 55 CVs, shortlist top 5 candidates
-- PR — follow up w PR Genius
-- Turtle DD Documentation — pinged
-- LP Two-Pager — pending sample from GSR
-- OKX form - submitted
+- Turtle Documents — confirm outdated TWAP language and soft lock details removed; coordinate with Turtle on DocSend link updates and version control
+- SEO update - pending Red
+- Marketing Lead Applicant: 95 CVs, reviewing, follow up with questions
+- PR - Follow up w PR Genius
 
 @sowmyaraghavan
-- Asset breakdown
-- Points Console Doc — update per Abolaji feedback
-- Whitepaper / Stablecoin
-- Neobank - schedule dedicated meeting next week, Caitlyn onboarding
-
-@caitlinsarah
-- Neobank Onboarding — Caitlyn onboarding
+- Whitepaper/Vault Strategy — Amber protocol research and multi-chain vault competitive analysis + whitepaper outline
+- Neobank
 ```
+
+Real usage note: attendees often reply inline underneath this message in the same Telegram
+thread (confirming an item, asking a follow-up) — the routine only ever posts the agenda itself
+once per matching event; it doesn't need to handle replies.
 
 ## Why the window is 3-6h, not 3-4h
 

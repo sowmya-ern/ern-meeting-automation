@@ -23,7 +23,7 @@ function formatSummaryBody(summary) {
     return `Hey guys please find here the meeting summary for today. Please lmk if anything's missing.\n${mentionsLine}${escapeHtml(summary.title)} Summary\n\nOverview:\n${withBoldMarkers(summary.overview)}\n\nAction Items:\n${withBoldMarkers(summary.action_items)}`;
 }
 
-function createNotifier({ botToken, opsChatId, httpPost = defaultHttpPost }) {
+function createNotifier({ botToken, opsChatId, unroutedChatId, httpPost = defaultHttpPost }) {
     const url = `https://api.telegram.org/bot${botToken}/sendMessage`;
 
     function send(chatId, text, parseMode = 'HTML') {
@@ -50,7 +50,7 @@ function createNotifier({ botToken, opsChatId, httpPost = defaultHttpPost }) {
 
     async function notifyUnrouted(meetingId, meetingTitle, summary) {
         const text = `No routing match for meeting "${escapeHtml(meetingTitle)}" (${escapeHtml(meetingId)}) — sending summary here instead.\n\n${formatSummaryBody(summary)}`;
-        await send(opsChatId, text);
+        await send(unroutedChatId, text);
     }
 
     return { notifySummaryTo, notifyOpsFailure, notifyUnrouted, sendPlainText };

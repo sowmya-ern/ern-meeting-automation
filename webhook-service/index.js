@@ -25,6 +25,9 @@ const app = createApp({
     notifier: createNotifier({
         botToken: process.env.TELEGRAM_BOT_TOKEN,
         opsChatId: process.env.TELEGRAM_OPS_CHAT_ID,
+        // Meetings with no routing match go to ERN Super Team (visible to the whole team),
+        // not the private ops DM — opsChatId stays reserved for genuine processing failures.
+        unroutedChatId: process.env.TELEGRAM_CHAT_ERN_SUPER_TEAM,
     }),
     seenMeetings: createSeenMeetings(),
     meetingRouter,

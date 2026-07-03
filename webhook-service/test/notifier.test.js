@@ -84,16 +84,16 @@ test('notifyOpsFailure posts to opsChatId with meetingId and reason', async () =
     assert.equal(calls[0].body.parse_mode, 'HTML');
 });
 
-test('notifyUnrouted posts to opsChatId with the meeting title and summary', async () => {
+test('notifyUnrouted posts to unroutedChatId (not opsChatId) with the meeting title and summary', async () => {
     const calls = [];
     const httpPost = async (url, body) => { calls.push({ url, body }); };
 
-    const notifier = createNotifier({ botToken: 'test-token', opsChatId: 'ops-1', httpPost });
+    const notifier = createNotifier({ botToken: 'test-token', opsChatId: 'ops-1', unroutedChatId: 'super-team-chat', httpPost });
     const summary = { title: 'Random 1:1', overview: 'ov', action_items: 'ai' };
     await notifier.notifyUnrouted('meeting-7', 'Random 1:1', summary);
 
     assert.equal(calls.length, 1);
-    assert.equal(calls[0].body.chat_id, 'ops-1');
+    assert.equal(calls[0].body.chat_id, 'super-team-chat');
     assert.match(calls[0].body.text, /Random 1:1/);
     assert.match(calls[0].body.text, /meeting-7/);
     assert.match(calls[0].body.text, /ov/);
