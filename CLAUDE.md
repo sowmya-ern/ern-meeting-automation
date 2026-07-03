@@ -43,7 +43,15 @@ Domain vocabulary: [CONTEXT.md](CONTEXT.md) · Module spec: [docs/2026-07-01-SPE
   transcript `title` against an ordered, most-specific-first rule list) and reshaped
   `notifier.js`/`handle-webhook.js` accordingly — see the 2026-07-02 revision in
   [docs/2026-07-01-SPEC.md](docs/2026-07-01-SPEC.md). Unmatched meeting titles fall back to
-  the ops chat (`status: 'unrouted'`) instead of being silently dropped. **27/27 tests pass.**
+  the ops chat (`status: 'unrouted'`) instead of being silently dropped.
+- **Shared message format (2026-07-02)**: the pre-meeting routine's agenda prompt was given a
+  concrete per-person structure (opening line, `@mention` line, `<series> Agenda` title, one
+  section per attendee — see `routines/pre-meeting-reminder.md`), and the webhook service's
+  post-meeting summary was brought to the same visual style. Added `attendee-handles.js`
+  (Fireflies display name → Telegram `@handle`, unmapped names fall back to plain name) and
+  extended `fireflies-client.js` to fetch `meeting_attendees`. Action items themselves stay one
+  unstructured string per meeting (Fireflies doesn't group them per attendee) — only the
+  header/mentions match between the two paths. **31/31 tests pass.**
 - CI (`.github/workflows/test.yml`, runs `npm test` on push/PR) and deploy config
   (`render.yaml`, declares the Render web service with 5 env vars marked `sync: false` so
   Render prompts for real values instead of reading them from the repo) are in place —
@@ -51,23 +59,99 @@ Domain vocabulary: [CONTEXT.md](CONTEXT.md) · Module spec: [docs/2026-07-01-SPE
 - Cloud Routine for pre-meeting reminders is **not yet created** — prompt is ready in
   `routines/pre-meeting-reminder.md`, needs to be registered via the `/schedule` skill or
   claude.ai/code/routines.
-- **Pushed to GitHub**: [sowmya-ern/ern-meeting-automation](https://github.com/sowmya-ern/ern-meeting-automation)
-  (private). CI ran on push and passed (19/19 tests green in GitHub Actions).
+- **Pushed to GitHub**: [sowmya-ern/ern-meeting-automation](https://github.com/sowmya-ern/ern-meeting-automation).
+  CI ran on push and passed (19/19 tests green in GitHub Actions). **Made public 2026-07-03**
+  (was private) to unblock Render's Blueprint repo picker — verified first that `.env` was
+  never committed at any point in git history and no secret-pattern matches exist anywhere in
+  history before flipping visibility. Repo docs (CLAUDE.md, CONTEXT.md, routine prose) contain
+  real team member names/handles and internal strategy notes, now world-readable — no
+  credentials.
 
 ## Open items before go-live
 
-1. Deploy `webhook-service/` to Render (repo is already pushed), enter the 6 env vars in
-   Render's dashboard (`.env` has the values for everything except `FIREFLIES_SECRET`).
-2. Register the deployed URL on Fireflies' dashboard — that's where `FIREFLIES_SECRET` gets
-   generated; add it to Render's env vars once you have it.
-3. Google Calendar MCP connector still needed for the pre-meeting routine (separate from the
-   webhook credentials — an OAuth authorization, not a token to hand over).
-4. Register the Cloud Routine (`routines/pre-meeting-reminder.md`) via `/schedule`.
-5. Run the staging checklist in the plan doc (section 5) before treating the routed chats as
+1. ~~Deploy `webhook-service/` to Render~~ **Done (2026-07-03).** Repo made public
+   (`github.com/sowmya-ern/ern-meeting-automation`) to unblock Render's repo fetch (no GitHub
+   App install-access grant needed once public — see repo-visibility note below). Created via
+   Render's REST API directly (`POST /v1/services`, service id `srv-d93o9icvikkc73ankr10`),
+   not the dashboard: `type: web_service`, `rootDir: webhook-service`, `runtime: node`,
+   `buildCommand: npm install`, `startCommand: npm start`, `plan: free`, `region: oregon`, all
+   9 required env vars set (`RELAY_SECRET` freshly generated via `openssl rand -hex 32`, synced
+   to local `.env` too; `FIREFLIES_SECRET` and `ANTHROPIC_API_KEY` intentionally left unset —
+   both optional/fallback-safe). Live URL: `https://ern-fireflies-webhook.onrender.com`.
+2. Register the deployed URL on Fireflies' dashboard — that's where you supply (not receive)
+   `FIREFLIES_SECRET`, a self-generated signing secret entered into Fireflies' webhook config
+   (`app.fireflies.ai/integrations/api/webhook`, Webhooks V2, endpoint
+   `https://ern-fireflies-webhook.onrender.com/webhook/fireflies`) — add the same value to
+   Render's env vars afterward.
+3. Register the Cloud Routine (`routines/pre-meeting-reminder.md`) via `/schedule` or
+   claude.ai/code/routines, toggling on the "Google Calendar" connector — `WEBHOOK_RELAY_URL`
+   is now known (`https://ern-fireflies-webhook.onrender.com`) and `RELAY_SECRET` exists; ready
+   to register.
+4. Run the staging checklist in the plan doc (section 5) before treating the routed chats as
    fully live — the routing table is untested against a real Fireflies transcript title.
 
 Fireflies signature verification (`x-hub-signature`, HMAC-SHA256) is confirmed correct against
 their webhook docs — no longer an open item.
+
+**Pre-meeting routing parity fix (2026-07-02):** the pre-meeting routine still sent every
+agenda to one `TELEGRAM_CHAT_ID`, while `webhook-service`'s post-meeting side already routed
+per meeting series. Brought the routine's prose in line with `meeting-router.js`'s table
+(same 5 env vars, same most-specific-first title matching, same unrouted-goes-to-ops
+fallback) so a meeting series lands in the same chat for both its agenda and its summary.
+
+**Google Calendar connector (2026-07-02): confirmed already live, no OAuth setup needed.**
+A separate Google Workspace "Calendar MCP server" (`calendarmcp.googleapis.com`, real but
+currently Developer Preview, would need a self-managed Google Cloud OAuth client) looked like
+a prerequisite, but it isn't — Cloud Routines pull from Anthropic's own claude.ai connectors,
+not from custom self-hosted MCP servers. Verified directly: `list_calendars` via the
+claude.ai Google Calendar connector already returns real data
+(`sowmya@rivr.net` + Singapore holidays) in this environment, so the routine just needs that
+same connector toggled on when created — no Google Cloud project or OAuth client required.
+
+**Cloud Routine secret handling (2026-07-03): resolved via a relay endpoint, see
+[ADR-0004](docs/adr/0004-pre-meeting-relay-instead-of-routine-secrets.md).** Confirmed via
+Anthropic's own docs that Cloud Routines have no real secrets store (the Environment's env-var
+panel explicitly warns against putting credentials there), so the routine never gets
+`TELEGRAM_BOT_TOKEN` or a real chat_id. Added `webhook-service`'s
+`POST /relay/telegram-agenda` (`verify-relay-token.js`, `relay-chat-keys.js`, `notifier.js`'s
+new `sendPlainText`) — the routine holds only `RELAY_SECRET` (narrow-purpose, easy to rotate)
+and a symbolic chat key (`BOND_TEAM`, `BOND_NEBULA`, `ERN_EXEC_STANDUP`, `ERN_SUPER_TEAM`,
+`OPS`); `webhook-service` resolves the real chat_id and sends server-side. `routines/
+pre-meeting-reminder.md` updated to call the relay instead of the Telegram API directly.
+**55/55 tests pass.**
+
+**Live summarization added (2026-07-03), see [ADR-0003](docs/adr/0003-live-summarization-in-webhook-service.md).**
+`webhook-service` now optionally condenses the raw Fireflies summary via a direct Anthropic API
+call (`summarizer.js`) before Telegram send — collapses the overview to ≤3 sentences, rewrites
+action items with imperative verbs grouped by assignee, merges cross-assignee overlaps, bolds
+deadlines. Synchronous, with mandatory fallback to the raw summary on any failure (including
+when `ANTHROPIC_API_KEY` is simply unset) — never drops a summary. Also switched
+`notifier.js` from no-`parse_mode` to `parse_mode: 'HTML'` with a 3-character `escapeHtml()`
+applied to everything interpolated, so `**word**` markers (the only source of bold text) can be
+converted to `<b>` tags without trusting raw HTML from Fireflies or the model. Also fixed:
+`render.yaml` still listed the old single `TELEGRAM_CHAT_ID` instead of the 4 per-series chat
+vars from the 2026-07-02 routing revision — never updated at the time, now corrected, plus the
+new `ANTHROPIC_API_KEY` added.
+
+**Architecture review applied (2026-07-03)** via `/improve-codebase-architecture` (report:
+`architecture-review-1783037862.html` in the OS temp dir). 3 candidates found, all applied or
+otherwise addressed:
+1. **Strong** — the `**bold**` marker convention was independently duplicated in
+   `summarizer.js` (producer) and `notifier.js` (consumer) with no shared seam and no
+   integration test; a format drift would have silently shipped literal `**text**` to Telegram
+   instead of triggering the fallback. Fixed: extracted `bold-marker.js` as the one shared
+   contract, both modules now depend on it, added `summarizer-notifier-integration.test.js`
+   driving a real summarizer output through the real notifier.
+2. **Strong** — `index.js`'s inline 4-rule routing table was untested business policy (CLAUDE.md
+   itself flagged this as an open item). Fixed: extracted `routing-table.js` with an
+   `assertOrderingIsSafe` invariant check, called at startup so a misordered rule fails fast
+   instead of silently misrouting.
+3. **ADR-blocked, process-only** — the routing table and attendee-handle table are duplicated
+   between code and `routines/pre-meeting-reminder.md` prose; ADR-0001/0002 already establish
+   why this can't be unified (a Cloud Routine prompt has no code path to `require()` either
+   file). Added two-way "kept in sync" comments in both directions instead.
+Also fixed in passing: CONTEXT.md's `FirefliesClient` interface line was stale (wrong
+`fetchSummary` signature, missing `attendees`). **44/44 tests pass.**
 
 ## Skills that speed this up
 

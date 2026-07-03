@@ -32,14 +32,15 @@ Staff are taught to prompt in plain English; CLI/terminal concepts are deliberat
 A person (contractor/team member) who owns Marketing content-creation tasks in the Ops
 backlog — not an AI agent or bot. Needs onboarding to Claude Code like any other staffer.
 
-## Modules (post architecture-review, 2026-07-01; routing added 2026-07-02)
+## Modules (post architecture-review, 2026-07-01; routing added 2026-07-02; summarizer + 2026-07-03 architecture review)
 
 **FirefliesClient**
 The module that knows how to ask Fireflies for a transcript summary: the GraphQL query, the
 auth header, and the retry/backoff policy for "summary not ready yet." Interface:
-`fetchSummary(meetingId, retryPolicy) -> { title, overview, action_items } | null`. The GraphQL
-query fetches `title` alongside the summary specifically so MeetingRouter has something to
-match against.
+`fetchSummary(meetingId) -> { title, attendees, overview, action_items } | null` — the retry
+count/delay are constructor-time config on `createFirefliesClient`, not a per-call argument.
+The GraphQL query fetches `title` alongside the summary specifically so MeetingRouter has
+something to match against, and `meeting_attendees` so Notifier can build the `@mention` line.
 
 **MeetingRouter**
 Owns "which chat does this meeting series go to." Interface: `resolveChatId(meetingTitle) ->
@@ -53,7 +54,50 @@ The module that owns "who gets told what" once a destination is known. Three ope
 `notifySummaryTo(chatId, summary)` (a routed team chat), `notifyOpsFailure(meetingId, reason)`
 (the ops chat, real processing failures), and `notifyUnrouted(meetingId, meetingTitle,
 summary)` (the ops chat, safety net for a summary that fetched fine but matched no
-MeetingRouter rule — surfaced to a human instead of dropped).
+MeetingRouter rule — surfaced to a human instead of dropped). The message body (opening line,
+`@mention` line, `<title> Summary` heading) is shared by all three via an internal
+`formatSummaryBody` helper, matching the per-person agenda format used by the pre-meeting
+routine — see "Reminder window" below and
+[routines/pre-meeting-reminder.md](routines/pre-meeting-reminder.md).
+
+**AttendeeHandles**
+The lookup from a Fireflies attendee's display name to their Telegram `@handle`, used by
+Notifier to build the `@mention` line. A small hardcoded table (`webhook-service/src/
+attendee-handles.js`) — unlike the reminder window, this needs a real value at runtime, not
+just prose, so it lives in code. Unmapped names fall back to the plain display name instead of
+being dropped.
+
+**Summarizer**
+The optional module that condenses a raw Fireflies summary via a live Anthropic API call
+before it reaches Notifier — see [ADR-0003](docs/adr/0003-live-summarization-in-webhook-service.md)
+for why this exists at all. Interface: `simplify(summary) -> Promise<{ overview, action_items }>`.
+Throws on any failure (API error, malformed response) rather than silently degrading — the
+caller (`handleFirefliesWebhook`'s `simplifyOrFallback`) decides that a thrown error means
+"send the raw summary instead," never "drop the meeting."
+
+**RoutingTable**
+The actual business data behind MeetingRouter's generic matcher: which chat each meeting series
+maps to, and the most-specific-first ordering that keeps `'Bond <> Nebula'` from being swallowed
+by the looser `'Bond'` rule. Interface: `buildRoutingRules(env) -> Rule[]`,
+`assertOrderingIsSafe(rules)` (throws if an earlier rule's `match` is a substring of a later
+rule's `match, i.e. would incorrectly win first). Extracted 2026-07-03 architecture review from
+`index.js`, which previously held this data inline and untested — kept in sync manually with
+the identical table in `routines/pre-meeting-reminder.md` (no code path from a Cloud Routine
+prompt to this module, per ADR-0001/0002).
+
+**Bold-marker convention**
+The `**word**` syntax Summarizer instructs the model to emit for hard deadlines, and Notifier
+converts to Telegram `<b>` tags. Lives in `webhook-service/src/bold-marker.js` as the one shared
+seam between the two — extracted in the 2026-07-03 architecture review after finding both
+modules independently "knew" this syntax with nothing keeping them in agreement.
+
+**RelayChatKeys**
+The symbolic-key lookup (`BOND_TEAM`, `BOND_NEBULA`, `ERN_EXEC_STANDUP`, `ERN_SUPER_TEAM`,
+`OPS`) the pre-meeting Cloud Routine uses instead of a real chat_id — see
+[ADR-0004](docs/adr/0004-pre-meeting-relay-instead-of-routine-secrets.md). Interface:
+`buildRelayChatMap(env) -> Record<key, chatId>`, `resolveRelayChatId(map, chatKey) -> chatId |
+null`. Kept in sync manually with the routine's prose table in
+`routines/pre-meeting-reminder.md` (same ADR-0001/0002 constraint as RoutingTable).
 
 **SeenMeetings**
 The dedupe guard. Interface: `has(meetingId)`, `markSeen(meetingId)`. In-process (`Set`-backed)
@@ -76,4 +120,5 @@ for why this isn't code.
 
 - [docs/2026-07-01-hybrid-implementation-plan.md](docs/2026-07-01-hybrid-implementation-plan.md) — architecture narrative and revision history.
 - [docs/2026-07-01-SPEC.md](docs/2026-07-01-SPEC.md) — module interfaces and test plan.
+- [docs/2026-07-02-meeting-automation-summary.md](docs/2026-07-02-meeting-automation-summary.md) — plain-English summary for non-technical readers (routing table, message examples, one-time setup checklist).
 - [docs/adr/](docs/adr/) — recorded decisions.

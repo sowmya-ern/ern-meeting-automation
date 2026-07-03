@@ -8,6 +8,7 @@ const { createSeenMeetings } = require('../src/seen-meetings');
 const { createMeetingRouter } = require('../src/meeting-router');
 
 const SECRET = 'test-secret';
+const RELAY_SECRET = 'test-relay-secret';
 const ROUTED_TITLE = 'ERN Daily Sync';
 
 function sign(body) {
@@ -15,7 +16,7 @@ function sign(body) {
 }
 
 function startTestServer({ fetchSummaryImpl } = {}) {
-    const calls = { notifySummaryTo: [], notifyOpsFailure: [], notifyUnrouted: [] };
+    const calls = { notifySummaryTo: [], notifyOpsFailure: [], notifyUnrouted: [], sendPlainText: [] };
     const firefliesClient = {
         fetchSummary: fetchSummaryImpl || (async () => ({ title: ROUTED_TITLE, overview: 'ov', action_items: 'ai' })),
     };
@@ -23,18 +24,22 @@ function startTestServer({ fetchSummaryImpl } = {}) {
         notifySummaryTo: async (chatId, summary) => { calls.notifySummaryTo.push({ chatId, summary }); },
         notifyOpsFailure: async (meetingId, reason) => { calls.notifyOpsFailure.push({ meetingId, reason }); },
         notifyUnrouted: async (meetingId, title, summary) => { calls.notifyUnrouted.push({ meetingId, title, summary }); },
+        sendPlainText: async (chatId, text) => { calls.sendPlainText.push({ chatId, text }); },
     };
     const meetingRouter = createMeetingRouter([{ match: ROUTED_TITLE, chatId: 'super-team-chat' }]);
+    const relayChatMap = { BOND_TEAM: 'bond-chat' };
 
     let resolveProcessed;
     const processed = new Promise((resolve) => { resolveProcessed = resolve; });
 
     const app = createApp({
         secret: SECRET,
+        relaySecret: RELAY_SECRET,
         firefliesClient,
         notifier,
         seenMeetings: createSeenMeetings(),
         meetingRouter,
+        relayChatMap,
         onProcessed: (result) => resolveProcessed(result),
     });
 
@@ -42,6 +47,35 @@ function startTestServer({ fetchSummaryImpl } = {}) {
     const port = server.address().port;
 
     return { server, port, calls, processed };
+}
+
+function postRelay(port, bodyObj, { authHeader } = {}) {
+    const body = JSON.stringify(bodyObj);
+    const auth = authHeader !== undefined ? authHeader : `Bearer ${RELAY_SECRET}`;
+
+    return new Promise((resolve, reject) => {
+        const req = http.request(
+            {
+                host: '127.0.0.1',
+                port,
+                path: '/relay/telegram-agenda',
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Content-Length': Buffer.byteLength(body),
+                    ...(auth !== null ? { Authorization: auth } : {}),
+                },
+            },
+            (res) => {
+                let data = '';
+                res.on('data', (chunk) => { data += chunk; });
+                res.on('end', () => resolve({ status: res.statusCode, body: data }));
+            }
+        );
+        req.on('error', reject);
+        req.write(body);
+        req.end();
+    });
 }
 
 function postWebhook(port, bodyObj, { signature } = {}) {
@@ -125,6 +159,40 @@ test('smoke: an unrecognized meeting title falls back to the ops chat instead of
         assert.equal(result.status, 'unrouted');
         assert.equal(calls.notifyUnrouted.length, 1);
         assert.equal(calls.notifySummaryTo.length, 0);
+    } finally {
+        server.close();
+    }
+});
+
+test('smoke: a relay request with a valid token and known chatKey sends plain text to the resolved chat', async () => {
+    const { server, port, calls } = startTestServer();
+    try {
+        const res = await postRelay(port, { chatKey: 'BOND_TEAM', text: 'Bond Agenda...' });
+        assert.equal(res.status, 200);
+        assert.equal(calls.sendPlainText.length, 1);
+        assert.deepEqual(calls.sendPlainText[0], { chatId: 'bond-chat', text: 'Bond Agenda...' });
+    } finally {
+        server.close();
+    }
+});
+
+test('smoke: a relay request with a wrong token is rejected with 401 and never sends', async () => {
+    const { server, port, calls } = startTestServer();
+    try {
+        const res = await postRelay(port, { chatKey: 'BOND_TEAM', text: 'Bond Agenda...' }, { authHeader: 'Bearer wrong-token' });
+        assert.equal(res.status, 401);
+        assert.equal(calls.sendPlainText.length, 0);
+    } finally {
+        server.close();
+    }
+});
+
+test('smoke: a relay request with an unknown chatKey is rejected with 400 and never sends', async () => {
+    const { server, port, calls } = startTestServer();
+    try {
+        const res = await postRelay(port, { chatKey: 'NOT_A_KEY', text: 'Bond Agenda...' });
+        assert.equal(res.status, 400);
+        assert.equal(calls.sendPlainText.length, 0);
     } finally {
         server.close();
     }

@@ -13,7 +13,17 @@ services:
         sync: false
       - key: TELEGRAM_BOT_TOKEN
         sync: false
-      - key: TELEGRAM_CHAT_ID
+      - key: TELEGRAM_CHAT_BOND_NEBULA
+        sync: false
+      - key: TELEGRAM_CHAT_BOND_TEAM
+        sync: false
+      - key: TELEGRAM_CHAT_ERN_EXEC_STANDUP
+        sync: false
+      - key: TELEGRAM_CHAT_ERN_SUPER_TEAM
         sync: false
       - key: TELEGRAM_OPS_CHAT_ID
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: RELAY_SECRET
         sync: false

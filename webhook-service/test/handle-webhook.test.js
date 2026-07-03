@@ -76,3 +76,31 @@ test('calls notifier.notifyUnrouted when no routing rule matches the meeting tit
     assert.equal(deps.calls.notifySummaryTo, 0);
     assert.equal(deps.calls.notifyOpsFailure, 0);
 });
+
+test('uses the summarizer to simplify the summary before notifying, when a summarizer is provided', async () => {
+    const deps = fakeDeps({ summary: { title: 'ERN Daily Sync', attendees: ['A'], overview: 'long overview', action_items: 'long items' } });
+    let notified;
+    deps.notifier.notifySummaryTo = async (chatId, summary) => { deps.calls.notifySummaryTo += 1; notified = summary; };
+    const summarizer = { simplify: async () => ({ overview: 'short overview', action_items: 'short items' }) };
+
+    const result = await handleFirefliesWebhook({ eventType: 'Transcription completed', meetingId: 'm6' }, { ...deps, summarizer });
+
+    assert.equal(result.status, 'processed');
+    assert.equal(notified.overview, 'short overview');
+    assert.equal(notified.action_items, 'short items');
+    assert.equal(notified.title, 'ERN Daily Sync', 'title/attendees should pass through unchanged');
+});
+
+test('falls back to the raw summary when the summarizer throws', async () => {
+    const deps = fakeDeps({ summary: { title: 'ERN Daily Sync', overview: 'long overview', action_items: 'long items' } });
+    let notified;
+    deps.notifier.notifySummaryTo = async (chatId, summary) => { deps.calls.notifySummaryTo += 1; notified = summary; };
+    const summarizer = { simplify: async () => { throw new Error('anthropic api down'); } };
+
+    const result = await handleFirefliesWebhook({ eventType: 'Transcription completed', meetingId: 'm7' }, { ...deps, summarizer });
+
+    assert.equal(result.status, 'processed');
+    assert.equal(notified.overview, 'long overview');
+    assert.equal(notified.action_items, 'long items');
+    assert.equal(deps.calls.notifyOpsFailure, 0, 'a summarizer failure must not be treated as a processing failure');
+});

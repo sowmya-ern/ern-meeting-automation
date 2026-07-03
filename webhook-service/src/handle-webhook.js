@@ -1,6 +1,18 @@
 const TRANSCRIPTION_COMPLETED = 'Transcription completed';
 
-async function handleFirefliesWebhook({ eventType, meetingId }, { firefliesClient, notifier, seenMeetings, meetingRouter }) {
+async function simplifyOrFallback(summarizer, summary) {
+    if (!summarizer) {
+        return summary;
+    }
+    try {
+        const { overview, action_items } = await summarizer.simplify(summary);
+        return { ...summary, overview, action_items };
+    } catch (error) {
+        return summary;
+    }
+}
+
+async function handleFirefliesWebhook({ eventType, meetingId }, { firefliesClient, notifier, seenMeetings, meetingRouter, summarizer }) {
     if (eventType !== TRANSCRIPTION_COMPLETED) {
         return { status: 'ignored', meetingId };
     }
@@ -11,12 +23,14 @@ async function handleFirefliesWebhook({ eventType, meetingId }, { firefliesClien
     seenMeetings.markSeen(meetingId);
 
     try {
-        const summary = await firefliesClient.fetchSummary(meetingId);
+        let summary = await firefliesClient.fetchSummary(meetingId);
 
         if (!summary) {
             await notifier.notifyOpsFailure(meetingId, 'summary was not ready after retrying');
             return { status: 'failed', meetingId };
         }
+
+        summary = await simplifyOrFallback(summarizer, summary);
 
         const chatId = meetingRouter.resolveChatId(summary.title);
         if (!chatId) {
