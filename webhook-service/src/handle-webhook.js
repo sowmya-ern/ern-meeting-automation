@@ -1,4 +1,6 @@
-const TRANSCRIPTION_COMPLETED = 'Transcription completed';
+// Fireflies Webhooks V2 event name (the V1 name, 'Transcription completed', is legacy —
+// see app.js for the V2 payload-field translation: `event`/`meeting_id` -> `eventType`/`meetingId`).
+const MEETING_SUMMARIZED = 'meeting.summarized';
 
 async function simplifyOrFallback(summarizer, summary) {
     if (!summarizer) {
@@ -13,7 +15,7 @@ async function simplifyOrFallback(summarizer, summary) {
 }
 
 async function handleFirefliesWebhook({ eventType, meetingId }, { firefliesClient, notifier, seenMeetings, meetingRouter, summarizer }) {
-    if (eventType !== TRANSCRIPTION_COMPLETED) {
+    if (eventType !== MEETING_SUMMARIZED) {
         return { status: 'ignored', meetingId };
     }
 

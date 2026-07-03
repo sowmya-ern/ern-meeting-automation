@@ -24,7 +24,7 @@ function fakeDeps({ summary = { title: 'ERN Daily Sync', overview: 'ov', action_
     return { firefliesClient, notifier, seenMeetings, meetingRouter, calls };
 }
 
-test('ignores events that are not "Transcription completed"', async () => {
+test('ignores events that are not "meeting.summarized"', async () => {
     const deps = fakeDeps();
     const result = await handleFirefliesWebhook({ eventType: 'Something else', meetingId: 'm1' }, deps);
     assert.deepEqual(result, { status: 'ignored', meetingId: 'm1' });
@@ -33,7 +33,7 @@ test('ignores events that are not "Transcription completed"', async () => {
 
 test('returns duplicate on a second call for the same meetingId without calling firefliesClient again', async () => {
     const deps = fakeDeps();
-    const event = { eventType: 'Transcription completed', meetingId: 'm1' };
+    const event = { eventType: 'meeting.summarized', meetingId: 'm1' };
 
     const first = await handleFirefliesWebhook(event, deps);
     assert.equal(first.status, 'processed');
@@ -46,7 +46,7 @@ test('returns duplicate on a second call for the same meetingId without calling 
 
 test('calls notifier.notifySummaryTo the routed chat on success', async () => {
     const deps = fakeDeps({ summary: { title: 'ERN Daily Sync', overview: 'ov', action_items: 'ai' } });
-    const result = await handleFirefliesWebhook({ eventType: 'Transcription completed', meetingId: 'm2' }, deps);
+    const result = await handleFirefliesWebhook({ eventType: 'meeting.summarized', meetingId: 'm2' }, deps);
     assert.equal(result.status, 'processed');
     assert.equal(deps.calls.notifySummaryTo, 1);
     assert.equal(deps.calls.notifyOpsFailure, 0);
@@ -55,7 +55,7 @@ test('calls notifier.notifySummaryTo the routed chat on success', async () => {
 
 test('calls notifier.notifyOpsFailure when fetchSummary resolves null', async () => {
     const deps = fakeDeps({ fetchSummaryImpl: async () => null });
-    const result = await handleFirefliesWebhook({ eventType: 'Transcription completed', meetingId: 'm3' }, deps);
+    const result = await handleFirefliesWebhook({ eventType: 'meeting.summarized', meetingId: 'm3' }, deps);
     assert.equal(result.status, 'failed');
     assert.equal(deps.calls.notifyOpsFailure, 1);
     assert.equal(deps.calls.notifySummaryTo, 0);
@@ -63,14 +63,14 @@ test('calls notifier.notifyOpsFailure when fetchSummary resolves null', async ()
 
 test('calls notifier.notifyOpsFailure when fetchSummary throws', async () => {
     const deps = fakeDeps({ fetchSummaryImpl: async () => { throw new Error('boom'); } });
-    const result = await handleFirefliesWebhook({ eventType: 'Transcription completed', meetingId: 'm4' }, deps);
+    const result = await handleFirefliesWebhook({ eventType: 'meeting.summarized', meetingId: 'm4' }, deps);
     assert.equal(result.status, 'failed');
     assert.equal(deps.calls.notifyOpsFailure, 1);
 });
 
 test('calls notifier.notifyUnrouted when no routing rule matches the meeting title', async () => {
     const deps = fakeDeps({ summary: { title: 'Random 1:1', overview: 'ov', action_items: 'ai' } });
-    const result = await handleFirefliesWebhook({ eventType: 'Transcription completed', meetingId: 'm5' }, deps);
+    const result = await handleFirefliesWebhook({ eventType: 'meeting.summarized', meetingId: 'm5' }, deps);
     assert.equal(result.status, 'unrouted');
     assert.equal(deps.calls.notifyUnrouted, 1);
     assert.equal(deps.calls.notifySummaryTo, 0);
@@ -83,7 +83,7 @@ test('uses the summarizer to simplify the summary before notifying, when a summa
     deps.notifier.notifySummaryTo = async (chatId, summary) => { deps.calls.notifySummaryTo += 1; notified = summary; };
     const summarizer = { simplify: async () => ({ overview: 'short overview', action_items: 'short items' }) };
 
-    const result = await handleFirefliesWebhook({ eventType: 'Transcription completed', meetingId: 'm6' }, { ...deps, summarizer });
+    const result = await handleFirefliesWebhook({ eventType: 'meeting.summarized', meetingId: 'm6' }, { ...deps, summarizer });
 
     assert.equal(result.status, 'processed');
     assert.equal(notified.overview, 'short overview');
@@ -97,7 +97,7 @@ test('falls back to the raw summary when the summarizer throws', async () => {
     deps.notifier.notifySummaryTo = async (chatId, summary) => { deps.calls.notifySummaryTo += 1; notified = summary; };
     const summarizer = { simplify: async () => { throw new Error('anthropic api down'); } };
 
-    const result = await handleFirefliesWebhook({ eventType: 'Transcription completed', meetingId: 'm7' }, { ...deps, summarizer });
+    const result = await handleFirefliesWebhook({ eventType: 'meeting.summarized', meetingId: 'm7' }, { ...deps, summarizer });
 
     assert.equal(result.status, 'processed');
     assert.equal(notified.overview, 'long overview');

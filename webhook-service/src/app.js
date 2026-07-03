@@ -19,7 +19,11 @@ function createApp({ secret, relaySecret, firefliesClient, notifier, seenMeeting
 
         res.status(200).send('Processing'); // Acknowledge webhook immediately
 
-        const result = await handleFirefliesWebhook(req.body, { firefliesClient, notifier, seenMeetings, meetingRouter, summarizer });
+        // Fireflies Webhooks V2 sends { event, meeting_id, timestamp } — translate to our
+        // internal { eventType, meetingId } vocabulary here, at the transport boundary, so
+        // handle-webhook.js stays agnostic to Fireflies' wire format.
+        const { event, meeting_id: meetingId } = req.body ?? {};
+        const result = await handleFirefliesWebhook({ eventType: event, meetingId }, { firefliesClient, notifier, seenMeetings, meetingRouter, summarizer });
         if (onProcessed) onProcessed(result);
     });
 

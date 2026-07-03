@@ -107,10 +107,10 @@ function postWebhook(port, bodyObj, { signature } = {}) {
     });
 }
 
-test('smoke: a validly signed "Transcription completed" webhook is acked and routed end-to-end', async () => {
+test('smoke: a validly signed Fireflies V2 "meeting.summarized" webhook is acked and routed end-to-end', async () => {
     const { server, port, calls, processed } = startTestServer();
     try {
-        const res = await postWebhook(port, { eventType: 'Transcription completed', meetingId: 'smoke-1' });
+        const res = await postWebhook(port, { event: 'meeting.summarized', meeting_id: 'smoke-1', timestamp: '2026-07-03T00:00:00Z' });
         assert.equal(res.status, 200);
 
         const result = await processed;
@@ -127,7 +127,7 @@ test('smoke: a validly signed "Transcription completed" webhook is acked and rou
 test('smoke: a webhook with a bad signature is rejected with 401 and never reaches the notifier', async () => {
     const { server, port, calls } = startTestServer();
     try {
-        const res = await postWebhook(port, { eventType: 'Transcription completed', meetingId: 'smoke-2' }, { signature: 'sha256=deadbeef' });
+        const res = await postWebhook(port, { event: 'meeting.summarized', meeting_id: 'smoke-2' }, { signature: 'sha256=deadbeef' });
         assert.equal(res.status, 401);
         assert.equal(calls.notifySummaryTo.length, 0);
         assert.equal(calls.notifyOpsFailure.length, 0);
@@ -139,7 +139,7 @@ test('smoke: a webhook with a bad signature is rejected with 401 and never reach
 test('smoke: when the summary never becomes ready, an ops-failure alert fires instead of a summary', async () => {
     const { server, port, calls, processed } = startTestServer({ fetchSummaryImpl: async () => null });
     try {
-        await postWebhook(port, { eventType: 'Transcription completed', meetingId: 'smoke-3' });
+        await postWebhook(port, { event: 'meeting.summarized', meeting_id: 'smoke-3' });
         const result = await processed;
         assert.equal(result.status, 'failed');
         assert.equal(calls.notifyOpsFailure.length, 1);
@@ -154,7 +154,7 @@ test('smoke: an unrecognized meeting title falls back to the ops chat instead of
         fetchSummaryImpl: async () => ({ title: 'Random 1:1', overview: 'ov', action_items: 'ai' }),
     });
     try {
-        await postWebhook(port, { eventType: 'Transcription completed', meetingId: 'smoke-4' });
+        await postWebhook(port, { event: 'meeting.summarized', meeting_id: 'smoke-4' });
         const result = await processed;
         assert.equal(result.status, 'unrouted');
         assert.equal(calls.notifyUnrouted.length, 1);

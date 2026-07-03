@@ -105,10 +105,25 @@ today; the interface exists so a persistent adapter (e.g. Redis) can replace it 
 touching the handler.
 
 **handleFirefliesWebhook**
-The transport-agnostic core: `handleFirefliesWebhook(rawEvent, { firefliesClient, notifier,
-seenMeetings, meetingRouter }) -> Result`. Takes injected adapters, returns a result describing
-what happened (processed / ignored / duplicate / unrouted / failed). The Express route is a
-thin adapter translating req/res to and from this function — it is not where policy lives.
+The transport-agnostic core: `handleFirefliesWebhook({ eventType, meetingId }, { firefliesClient,
+notifier, seenMeetings, meetingRouter, summarizer }) -> Result`. Takes injected adapters, returns
+a result describing what happened (processed / ignored / duplicate / unrouted / failed). Only
+processes `eventType === 'meeting.summarized'` (Fireflies **Webhooks V2**'s event name — see
+below); anything else returns `{ status: 'ignored' }`.
+
+**Fireflies Webhooks V1 vs V2 (2026-07-03)**
+Fireflies has two webhook systems with genuinely different payload shapes — this project uses
+**V2** (`app.fireflies.ai/integrations/api/webhook`), which sends `{ event, meeting_id,
+timestamp }` (event names: `meeting.transcribed`, `meeting.summarized`, `meeting.bot_joined`).
+V1 (`app.fireflies.ai/settings` Developer Settings) sends `{ eventType: 'Transcription
+completed', meetingId }` instead — the shape this project's internal vocabulary is still named
+after (`handleFirefliesWebhook`'s parameters), for historical reasons. `app.js` is the one place
+that knows about the V2 wire format — it translates `event`/`meeting_id` into
+`eventType`/`meetingId` before calling `handleFirefliesWebhook`, so the transport-agnostic core
+never has to know which webhook version is configured. If Fireflies' account is ever
+reconfigured to V1, only `app.js`'s translation needs to change. Subscribe to
+**`meeting.summarized`** specifically, not `meeting.transcribed` — the latter fires before the
+AI summary exists, which `fetchSummary`'s retry loop is built to tolerate but doesn't need to.
 
 **Reminder window**
 The pre-meeting reminder policy (3-6 hours before a meeting starts, hourly cadence, marked
