@@ -1,7 +1,7 @@
 // The one shared contract between summarizer.js (producer — instructs the model to emit this
 // syntax) and notifier.js (consumer — converts it to Telegram HTML). Both modules depend on
 // this file rather than each independently assuming the other's format.
-const BOLD_MARKER_SYNTAX_HINT = 'wrap hard deadlines inline in ** ** (e.g. **July 15**)';
+const BOLD_MARKER_SYNTAX_HINT = 'wrap hard calendar-anchored deadlines inline in ** ** (e.g. **July 15**, **next Thursday**) — never vague urgency words like "urgent"/"ASAP"';
 const BOLD_MARKER_PATTERN = /\*\*(.+?)\*\*/g;
 
 function toHtmlBold(escapedText) {

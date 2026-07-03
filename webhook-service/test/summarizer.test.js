@@ -48,3 +48,20 @@ test('simplify() rejects when the response text is missing the expected OVERVIEW
 
   await assert.rejects(() => summarizer.simplify({ title: 'Meet', attendees: [], overview: 'ov', action_items: 'ai' }));
 });
+
+test('simplify() sends a prompt banning semicolon-chained overview sentences, bare process verbs, and requiring TBC over guessed specificity', async () => {
+  const calls = [];
+  const httpPost = async (url, body) => {
+    calls.push({ url, body });
+    return { data: { content: [{ type: 'text', text: 'OVERVIEW:\nOne.\n\nACTION_ITEMS:\n**Name**\nGet the doc.' }] } };
+  };
+  const summarizer = createSummarizer({ apiKey: 'test-key', httpPost });
+
+  await summarizer.simplify({ title: 'Meet', attendees: [], overview: 'ov', action_items: 'ai' });
+
+  const prompt = calls[0].body.messages[0].content;
+  assert.match(prompt, /never chain multiple facts into one sentence with semicolons/);
+  assert.match(prompt, /never a bare process verb alone \(discuss\/follow up\/coordinate\/review\)/);
+  assert.match(prompt, /append "\(TBC\)"/);
+  assert.match(prompt, /append "\(outcome: TBC\)"/);
+});

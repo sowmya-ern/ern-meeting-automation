@@ -6,10 +6,10 @@ const ANTHROPIC_URL = 'https://api.anthropic.com/v1/messages';
 const RULES = `Simplify this meeting summary. Respond with EXACTLY this format and nothing else:
 
 OVERVIEW:
-<no more than 3 sentences, one per distinct domain (e.g. market/strategy, engineering/product, operations/team); omit detail already covered in action items>
+<no more than 3 sentences, one per distinct domain (e.g. market/strategy, engineering/product, operations/team); each sentence states exactly one fact/decision/status — never chain multiple facts into one sentence with semicolons; if a topic has several sub-facts, keep only the single most decision-relevant one and drop the rest; omit detail already covered in action items>
 
 ACTION_ITEMS:
-<grouped by assignee under a "**Name**" heading; each item starts with an imperative verb; no timestamps; where two assignees share an overlapping task, merge it into one item noting joint ownership; ${BOLD_MARKER_SYNTAX_HINT}>`;
+<grouped by assignee under a "**Name**" heading; each item opens with a deliverable verb naming what changes as a result (Get/Send/Confirm/Update/Schedule or similar) — never a bare process verb alone (discuss/follow up/coordinate/review) with no concrete outcome attached; no timestamps; where two assignees share an overlapping task, merge it into one item noting joint ownership; if an item has no clear deadline, do not guess one — append "(TBC)"; if no concrete deliverable can be identified for an item, use the closest honest verb and append "(outcome: TBC)" rather than inventing specificity; ${BOLD_MARKER_SYNTAX_HINT}>`;
 
 function buildPrompt({ title, attendees, overview, action_items }) {
   return `${RULES}

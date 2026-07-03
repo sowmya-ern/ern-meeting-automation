@@ -134,6 +134,20 @@ converted to `<b>` tags without trusting raw HTML from Fireflies or the model. A
 vars from the 2026-07-02 routing revision — never updated at the time, now corrected, plus the
 new `ANTHROPIC_API_KEY` added.
 
+**Summarizer tightened + activated (2026-07-03).** `ANTHROPIC_API_KEY` was live-but-unset on
+Render since deploy, so every meeting was silently going out as the raw, uncondensed Fireflies
+summary (7+ overview bullets, full per-item timestamps) — the summarizer path existed in code
+but never actually ran. Key is now set on Render (real value, not committed anywhere). Also
+tightened `summarizer.js`'s `RULES` per a `/grill-me` session: overview sentences may no longer
+chain multiple facts with semicolons (one fact/decision per sentence, cut to the single most
+decision-relevant sub-fact per topic); action items must open with a deliverable verb naming a
+concrete outcome (Get/Send/Confirm/Update/Schedule), banning bare process verbs
+(discuss/follow up/coordinate/review) with nothing attached; vague deadlines get `(TBC)` rather
+than a guessed date, and vague deliverables get `(outcome: TBC)` rather than invented
+specificity — same "never guess, mark unclear as unclear" principle already used in the
+pre-meeting agenda's unmapped-owner "Other" bucket. Bold-marker hint narrowed to
+calendar-anchored dates only, not vague urgency words. **56/56 tests pass.**
+
 **Architecture review applied (2026-07-03)** via `/improve-codebase-architecture` (report:
 `architecture-review-1783037862.html` in the OS temp dir). 3 candidates found, all applied or
 otherwise addressed:
