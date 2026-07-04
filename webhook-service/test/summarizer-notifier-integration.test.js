@@ -12,7 +12,7 @@ test('a real summarizer output renders correctly through the real notifier, bold
     data: {
       content: [{
         type: 'text',
-        text: 'OVERVIEW:\nOne sentence.\n\nACTION_ITEMS:\n**Vinson Leow**\nReview the **July 15** deadline.',
+        text: 'OVERVIEW:\nOne sentence.\n\nSECTIONS:\nEMOJI: 🛠\nHEADER: Engineering\nBULLETS:\n- Shipped the API\n\nACTION_ITEMS:\n**Vinson Leow**\nReview the **July 15** deadline.\n\nNEXT_STEPS:\n- None noted this cycle.',
       }],
     },
   });
