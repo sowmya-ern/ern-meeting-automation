@@ -56,3 +56,32 @@ test('resolveSeriesKey returns null when rules have no seriesKey field (backward
     const router = createMeetingRouter(RULES);
     assert.equal(router.resolveSeriesKey('Bond daily standup'), null);
 });
+
+const RULES_WITH_COMPANY = [
+    { match: 'Bond <> Nebula', chatId: 'bond-nebula-chat', seriesKey: 'BOND_NEBULA', company: 'BOND' },
+    { match: 'Bond', chatId: 'bond-team-chat', seriesKey: 'BOND_TEAM', company: 'BOND' },
+    { match: 'ERN Daily Sync', chatId: 'super-team-chat', seriesKey: 'ERN_SUPER_TEAM', company: 'ERN' },
+];
+
+test('resolveCompany resolves the most specific rule first, same ordering as resolveChatId/resolveSeriesKey', () => {
+    const router = createMeetingRouter(RULES_WITH_COMPANY);
+    assert.equal(router.resolveCompany('Bond <> Nebula weekly sync'), 'BOND');
+    assert.equal(router.resolveCompany('Bond daily standup'), 'BOND');
+    assert.equal(router.resolveCompany('ERN Daily Sync - 2026-07-04'), 'ERN');
+});
+
+test('resolveCompany returns null when no rule matches', () => {
+    const router = createMeetingRouter(RULES_WITH_COMPANY);
+    assert.equal(router.resolveCompany('Random 1:1'), null);
+});
+
+test('resolveCompany returns null when the matched rule has no company field (backward compatible)', () => {
+    const router = createMeetingRouter(RULES);
+    assert.equal(router.resolveCompany('Bond daily standup'), null);
+});
+
+test('resolveCompany and resolveSeriesKey coexist on the same rule without interfering', () => {
+    const router = createMeetingRouter(RULES_WITH_COMPANY);
+    assert.equal(router.resolveSeriesKey('Bond daily standup'), 'BOND_TEAM');
+    assert.equal(router.resolveCompany('Bond daily standup'), 'BOND');
+});

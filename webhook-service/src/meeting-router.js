@@ -1,6 +1,6 @@
-// rules is an ORDERED array of { match, chatId, seriesKey }, checked most-specific-first.
-// e.g. 'Bond <> Nebula' must precede 'Bond' so a Bond<>Nebula meeting doesn't
-// fall into the looser Bond Team rule.
+// rules is an ORDERED array of { match, chatId, seriesKey, company }, checked
+// most-specific-first. e.g. 'Bond <> Nebula' must precede 'Bond' so a Bond<>Nebula meeting
+// doesn't fall into the looser Bond Team rule.
 function createMeetingRouter(rules) {
     function findRule(meetingTitle) {
         const title = meetingTitle || '';
@@ -20,7 +20,14 @@ function createMeetingRouter(rules) {
         return (rule && rule.seriesKey) || null;
     }
 
-    return { resolveChatId, resolveSeriesKey };
+    // Same null-collapsing convention as resolveSeriesKey, but for company classification --
+    // callers treat "no company from title" as "fall back to the content classifier."
+    function resolveCompany(meetingTitle) {
+        const rule = findRule(meetingTitle);
+        return (rule && rule.company) || null;
+    }
+
+    return { resolveChatId, resolveSeriesKey, resolveCompany };
 }
 
 module.exports = { createMeetingRouter };
