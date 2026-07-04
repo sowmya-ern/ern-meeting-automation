@@ -42,6 +42,23 @@ test('simplify() rejects when the API call fails, so the caller can fall back to
   );
 });
 
+test('simplify() finds the text block even when a "thinking" block precedes it in content[]', async () => {
+  const httpPost = async () => ({
+    data: {
+      content: [
+        { type: 'thinking', thinking: '', signature: 'abc' },
+        { type: 'text', text: 'OVERVIEW:\nOne.\n\nACTION_ITEMS:\n**Name**\nGet the doc.' },
+      ],
+    },
+  });
+  const summarizer = createSummarizer({ apiKey: 'test-key', httpPost });
+
+  const result = await summarizer.simplify({ title: 'Meet', attendees: [], overview: 'ov', action_items: 'ai' });
+
+  assert.equal(result.overview, 'One.');
+  assert.equal(result.action_items, '**Name**\nGet the doc.');
+});
+
 test('simplify() rejects when the response text is missing the expected OVERVIEW/ACTION_ITEMS markers', async () => {
   const httpPost = async () => ({ data: { content: [{ type: 'text', text: 'not the expected format' }] } });
   const summarizer = createSummarizer({ apiKey: 'test-key', httpPost });

@@ -44,7 +44,9 @@ function createSummarizer({ apiKey, model = 'claude-sonnet-5', maxTokens = 1024,
       { headers: { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' } }
     );
 
-    const text = response?.data?.content?.[0]?.text;
+    // Don't assume content[0] is the text block — extended-thinking-capable models prepend a
+    // "thinking" block before the actual "text" block, so index into content by type instead.
+    const text = response?.data?.content?.find((block) => block.type === 'text')?.text;
     if (!text) {
       throw new Error('summarizer response had no text content');
     }
