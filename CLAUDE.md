@@ -202,6 +202,20 @@ sections (prose-only change, no code). Out of scope, explicitly deferred: 30-min
 polling (the existing webhook is already real-time), Monday.com task links (no integration
 exists). **113/113 tests pass.**
 
+**Post-meeting message polish (2026-07-04), post-review of the notetaker merge above.** Two
+fixes from a deep critique of the actual Telegram output:
+1. **Reversed the `(TBC)`/`(outcome: TBC)` placeholders from the 2026-07-03 tightening entry
+   above** — user decision: a list of action items where most entries end in `(TBC)` reads as
+   uncertain/unfinished rather than as a clean task list. `summarizer.js`'s `RULES` now says to
+   omit an unclear deadline/outcome entirely rather than flagging it with a placeholder; the
+   "never guess" principle itself is unchanged, only the visible marker is gone.
+2. **`notifier.js`'s To-Dos message no longer trusts the model to blank-line-separate each
+   assignee's block** — `formatTodosBody` now deterministically splits `action_items` on each
+   bare `**Name**` heading line (distinct from an inline deadline bold like `**July 15**`) and
+   joins the sections with the same `---` divider used elsewhere in the message, so multiple
+   assignees always render as visually distinct blocks regardless of the model's own spacing.
+**114/114 tests pass.**
+
 ## Skills that speed this up
 
 Local (already available in this Claude Code install):

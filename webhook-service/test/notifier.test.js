@@ -177,6 +177,20 @@ test('notifyTodosTo groups action items, converts assignee names to handles, and
     assert.match(text, /https:\/\/app\.fireflies\.ai\/view\/abc123/);
 });
 
+test('notifyTodosTo inserts a divider between assignee sections even when the model puts no blank line between them', async () => {
+    const calls = [];
+    const httpPost = async (url, body) => { calls.push({ url, body }); };
+    const notifier = createNotifier({ botToken: 'test-token', opsChatId: 'ops-1', httpPost });
+
+    await notifier.notifyTodosTo('chat-1', {
+        title: 'Bond Daily Standup',
+        action_items: '**Vinson Leow**\nGet the doc.\n**Someone Unmapped**\nSend the update.',
+    });
+
+    const { text } = calls[0].body;
+    assert.match(text, /<b>@vinsonleow<\/b>\nGet the doc\.\n\n---\n\n<b>Someone Unmapped<\/b>\nSend the update\./);
+});
+
 test('notifyTodosTo omits the recording line and Next Steps section when absent', async () => {
     const calls = [];
     const httpPost = async (url, body) => { calls.push({ url, body }); };

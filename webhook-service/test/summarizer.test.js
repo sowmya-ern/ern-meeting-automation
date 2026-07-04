@@ -101,7 +101,7 @@ test('simplify() handles a SECTIONS block with multiple sections and an empty NE
   assert.equal(result.next_steps, 'None noted this cycle.');
 });
 
-test('simplify() sends a prompt banning semicolon-chained overview sentences, bare process verbs, and requiring TBC over guessed specificity', async () => {
+test('simplify() sends a prompt banning semicolon-chained overview sentences, bare process verbs, and inventing deadlines/outcomes', async () => {
   const calls = [];
   const httpPost = async (url, body) => { calls.push({ url, body }); return fakeResponse(FULL_RESPONSE); };
   const summarizer = createSummarizer({ apiKey: 'test-key', httpPost });
@@ -111,8 +111,10 @@ test('simplify() sends a prompt banning semicolon-chained overview sentences, ba
   const prompt = calls[0].body.messages[0].content;
   assert.match(prompt, /never chain multiple facts into one sentence with semicolons/);
   assert.match(prompt, /never a bare process verb alone \(discuss\/follow up\/coordinate\/review\)/);
-  assert.match(prompt, /append "\(TBC\)"/);
-  assert.match(prompt, /append "\(outcome: TBC\)"/);
+  assert.match(prompt, /do not guess one and do not add a placeholder — simply omit the deadline/);
+  assert.match(prompt, /without inventing specificity or flagging the gap/);
+  assert.doesNotMatch(prompt, /\(TBC\)/);
+  assert.doesNotMatch(prompt, /outcome: TBC/);
 });
 
 test('simplify() sends a prompt requiring blockers to be flagged with the warning emoji', async () => {

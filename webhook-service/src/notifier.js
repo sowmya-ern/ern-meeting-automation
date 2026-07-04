@@ -40,10 +40,33 @@ function formatAgendaOverviewBody(summary) {
     return `${header}${sectionBlocks}`;
 }
 
+// An assignee heading is a bare "**Name**" (or "**@handle**" post-linkify) alone on its own
+// line -- distinct from an inline deadline bold like "**July 15**" embedded in a sentence.
+const ASSIGNEE_HEADING_LINE = /^\*\*[^*\n]+\*\*$/;
+
+// Nothing guarantees the summarizer's action_items string puts a blank line between one
+// assignee's block and the next, so this deterministically splits on each heading and lets
+// the caller insert a divider -- Telegram formatting shouldn't depend on the model's whitespace.
+function splitActionItemsByAssignee(rawText) {
+    const lines = rawText.split('\n');
+    const sections = [];
+    let current = [];
+    for (const line of lines) {
+        if (ASSIGNEE_HEADING_LINE.test(line.trim()) && current.length > 0) {
+            sections.push(current.join('\n').trim());
+            current = [];
+        }
+        current.push(line);
+    }
+    if (current.length > 0) sections.push(current.join('\n').trim());
+    return sections;
+}
+
 // Message 3 of the post-meeting pair: action items (assignee names converted to @handles),
 // recording link (when Fireflies gave us one), Next Steps (when the summarizer produced one).
 function formatTodosBody(summary) {
-    const itemsBlock = withBoldMarkers(linkifyBoldNames(summary.action_items));
+    const sections = splitActionItemsByAssignee(linkifyBoldNames(summary.action_items));
+    const itemsBlock = sections.map(withBoldMarkers).join('\n\n---\n\n');
     const recordingLine = summary.recordingUrl
         ? `\n\n---\n\n🎥 <b>Recording</b>\n${escapeHtml(summary.recordingUrl)}`
         : '';
