@@ -16,14 +16,15 @@ function sign(body) {
 }
 
 function startTestServer({ fetchSummaryImpl } = {}) {
-    const calls = { notifySummaryTo: [], notifyOpsFailure: [], notifyUnrouted: [], sendPlainText: [] };
+    const calls = { notifyAgendaOverviewTo: [], notifyTodosTo: [], notifyOpsFailure: [], notifyUnrouted: [], sendPlainText: [] };
     const firefliesClient = {
         fetchSummary: fetchSummaryImpl || (async () => ({ title: ROUTED_TITLE, overview: 'ov', action_items: 'ai' })),
     };
     const notifier = {
-        notifySummaryTo: async (chatId, summary) => { calls.notifySummaryTo.push({ chatId, summary }); },
+        notifyAgendaOverviewTo: async (chatId, summary) => { calls.notifyAgendaOverviewTo.push({ chatId, summary }); },
+        notifyTodosTo: async (chatId, summary) => { calls.notifyTodosTo.push({ chatId, summary }); },
         notifyOpsFailure: async (meetingId, reason) => { calls.notifyOpsFailure.push({ meetingId, reason }); },
-        notifyUnrouted: async (meetingId, title, summary) => { calls.notifyUnrouted.push({ meetingId, title, summary }); },
+        notifyUnrouted: async (meetingId, title, summary, company) => { calls.notifyUnrouted.push({ meetingId, title, summary, company }); },
         sendPlainText: async (chatId, text) => { calls.sendPlainText.push({ chatId, text }); },
     };
     const meetingRouter = createMeetingRouter([{ match: ROUTED_TITLE, chatId: 'super-team-chat' }]);
@@ -115,8 +116,9 @@ test('smoke: a validly signed Fireflies V2 "meeting.summarized" webhook is acked
 
         const result = await processed;
         assert.deepEqual(result, { status: 'processed', meetingId: 'smoke-1' });
-        assert.equal(calls.notifySummaryTo.length, 1);
-        assert.equal(calls.notifySummaryTo[0].chatId, 'super-team-chat');
+        assert.equal(calls.notifyAgendaOverviewTo.length, 1);
+        assert.equal(calls.notifyTodosTo.length, 1);
+        assert.equal(calls.notifyAgendaOverviewTo[0].chatId, 'super-team-chat');
         assert.equal(calls.notifyOpsFailure.length, 0);
         assert.equal(calls.notifyUnrouted.length, 0);
     } finally {
@@ -129,7 +131,7 @@ test('smoke: a webhook with a bad signature is rejected with 401 and never reach
     try {
         const res = await postWebhook(port, { event: 'meeting.summarized', meeting_id: 'smoke-2' }, { signature: 'sha256=deadbeef' });
         assert.equal(res.status, 401);
-        assert.equal(calls.notifySummaryTo.length, 0);
+        assert.equal(calls.notifyAgendaOverviewTo.length, 0);
         assert.equal(calls.notifyOpsFailure.length, 0);
     } finally {
         server.close();
@@ -143,7 +145,7 @@ test('smoke: when the summary never becomes ready, an ops-failure alert fires in
         const result = await processed;
         assert.equal(result.status, 'failed');
         assert.equal(calls.notifyOpsFailure.length, 1);
-        assert.equal(calls.notifySummaryTo.length, 0);
+        assert.equal(calls.notifyAgendaOverviewTo.length, 0);
     } finally {
         server.close();
     }
@@ -158,7 +160,7 @@ test('smoke: an unrecognized meeting title falls back to the ops chat instead of
         const result = await processed;
         assert.equal(result.status, 'unrouted');
         assert.equal(calls.notifyUnrouted.length, 1);
-        assert.equal(calls.notifySummaryTo.length, 0);
+        assert.equal(calls.notifyAgendaOverviewTo.length, 0);
     } finally {
         server.close();
     }
@@ -193,6 +195,42 @@ test('smoke: a relay request with an unknown chatKey is rejected with 400 and ne
         const res = await postRelay(port, { chatKey: 'NOT_A_KEY', text: 'Bond Agenda...' });
         assert.equal(res.status, 400);
         assert.equal(calls.sendPlainText.length, 0);
+    } finally {
+        server.close();
+    }
+});
+
+test('smoke: an unrecognized title still gets a company guess from content when passed a companyClassifier', async () => {
+    const calls = { notifyAgendaOverviewTo: [], notifyTodosTo: [], notifyOpsFailure: [], notifyUnrouted: [], sendPlainText: [] };
+    const firefliesClient = {
+        fetchSummary: async () => ({ title: 'Ad Hoc Sync', overview: 'Discussed TVL and RE7 API updates.', action_items: 'ai' }),
+    };
+    const notifier = {
+        notifyAgendaOverviewTo: async () => {},
+        notifyTodosTo: async () => {},
+        notifyOpsFailure: async () => {},
+        notifyUnrouted: async (meetingId, title, summary, company) => { calls.notifyUnrouted.push({ company }); },
+        sendPlainText: async () => {},
+    };
+    const meetingRouter = createMeetingRouter([{ match: ROUTED_TITLE, chatId: 'super-team-chat', company: 'ERN' }]);
+    const { createCompanyClassifier } = require('../src/company-classifier');
+
+    let resolveProcessed;
+    const processed = new Promise((resolve) => { resolveProcessed = resolve; });
+    const app = createApp({
+        secret: SECRET, relaySecret: RELAY_SECRET, firefliesClient, notifier,
+        seenMeetings: createSeenMeetings(), meetingRouter, relayChatMap: {},
+        companyClassifier: createCompanyClassifier(),
+        onProcessed: (result) => resolveProcessed(result),
+    });
+    const server = app.listen(0);
+    const port = server.address().port;
+
+    try {
+        await postWebhook(port, { event: 'meeting.summarized', meeting_id: 'smoke-classify' });
+        await processed;
+        assert.equal(calls.notifyUnrouted.length, 1);
+        assert.equal(calls.notifyUnrouted[0].company, 'BOND');
     } finally {
         server.close();
     }

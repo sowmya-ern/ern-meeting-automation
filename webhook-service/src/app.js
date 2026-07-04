@@ -5,7 +5,7 @@ const { verifyRelayToken } = require('./verify-relay-token');
 const { resolveRelayChatId } = require('./relay-chat-keys');
 const { handleFirefliesWebhook } = require('./handle-webhook');
 
-function createApp({ secret, relaySecret, firefliesClient, notifier, seenMeetings, meetingRouter, summarizer, meetingHistory, historyConsolidator, relayChatMap, onProcessed }) {
+function createApp({ secret, relaySecret, firefliesClient, notifier, seenMeetings, meetingRouter, summarizer, companyClassifier, meetingHistory, historyConsolidator, relayChatMap, onProcessed }) {
     const app = express();
     app.use(express.json({ verify: (req, res, buf) => { req.rawBody = buf; } }));
 
@@ -25,7 +25,7 @@ function createApp({ secret, relaySecret, firefliesClient, notifier, seenMeeting
         const { event, meeting_id: meetingId } = req.body ?? {};
         const result = await handleFirefliesWebhook(
             { eventType: event, meetingId },
-            { firefliesClient, notifier, seenMeetings, meetingRouter, summarizer, meetingHistory, historyConsolidator }
+            { firefliesClient, notifier, seenMeetings, meetingRouter, summarizer, companyClassifier, meetingHistory, historyConsolidator }
         );
         if (onProcessed) onProcessed(result);
     });

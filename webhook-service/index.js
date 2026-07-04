@@ -6,6 +6,7 @@ const { createMeetingRouter } = require('./src/meeting-router');
 const { createSummarizer } = require('./src/summarizer');
 const { createMeetingHistory } = require('./src/meeting-history');
 const { createHistoryConsolidator } = require('./src/history-consolidator');
+const { createCompanyClassifier } = require('./src/company-classifier');
 const { buildRoutingRules, assertOrderingIsSafe } = require('./src/routing-table');
 const { buildRelayChatMap } = require('./src/relay-chat-keys');
 
@@ -32,6 +33,10 @@ const historyConsolidator = (meetingHistory && process.env.ANTHROPIC_API_KEY)
     ? createHistoryConsolidator({ apiKey: process.env.ANTHROPIC_API_KEY })
     : undefined;
 
+// Pure content-based fallback, no config needed -- always available, only ever consulted when
+// meetingRouter.resolveCompany(title) returns null (see handle-webhook.js's resolveCompany).
+const companyClassifier = createCompanyClassifier();
+
 const app = createApp({
     secret: process.env.FIREFLIES_SECRET,
     relaySecret: process.env.RELAY_SECRET,
@@ -47,6 +52,7 @@ const app = createApp({
     meetingRouter,
     relayChatMap,
     summarizer,
+    companyClassifier,
     meetingHistory,
     historyConsolidator,
     onProcessed: (result) => {
