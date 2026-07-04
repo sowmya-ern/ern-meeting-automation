@@ -179,6 +179,29 @@ exactly as it did before this change. Manual one-time setup still needed: create
 project and run `webhook-service/supabase/schema.sql`, then set the two env vars on Render.
 **79/79 tests pass.**
 
+**Fireflies-Telegram notetaker merge (2026-07-04), see
+[design spec](docs/superpowers/specs/2026-07-04-fireflies-telegram-notetaker-design.md) and
+[plan](docs/superpowers/plans/2026-07-04-fireflies-telegram-notetaker.md).** Merged the
+2026-07-04 "Agent Briefing" into the deployed pipeline, on top of the meeting-history work
+above: `company-profiles.js`/`company-classifier.js` add content-based Bond/ERN classification
+as a fallback when `routing-table.js`'s title match misses (title match stays authoritative for
+both routing and company, alongside the existing `seriesKey`). `summarizer.js`'s second
+parameter changed from a positional `seriesState` to a `{ seriesState, company }` context
+object, and its response now includes `SECTIONS`/`NEXT_STEPS` alongside `OVERVIEW`/
+`ACTION_ITEMS`, flags blockers with `⚠️`, reassigns handed-off tasks to their new owner, and
+takes a per-company tone hint. `notifier.js` sends the post-meeting update as two independent
+Telegram messages (Agenda/Overview, then To-Dos with a Fireflies recording link) instead of
+one — a failure in either is reported to ops without blocking the other or the history-write
+step that follows. `fireflies-client.js` now fetches `transcript_url`. Fixed Sowmya's handle
+(`@sraghavan`, was `@sowmyaraghavan`) and added missing Bond (`@redbeem`) and ERN (`@jonscott`,
+`@keliwhitlock`, `@JeradFinck`) handles. `routing-table.js` gained 3 new title patterns (`BOND
+Daily Standup`, `Bond <> 0g Weekly Sync`, `ERN <> Nebula`), each with a `seriesKey` for history
+tracking too. The pre-meeting routine's prompt changed from a 3-6h window with per-attendee
+bullets to an 11-13h window with topic-level "On the Agenda"/"Please review before joining"
+sections (prose-only change, no code). Out of scope, explicitly deferred: 30-min Fireflies
+polling (the existing webhook is already real-time), Monday.com task links (no integration
+exists). **113/113 tests pass.**
+
 ## Skills that speed this up
 
 Local (already available in this Claude Code install):

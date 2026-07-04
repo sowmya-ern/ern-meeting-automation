@@ -19,54 +19,64 @@ Use this with the `/schedule` skill (or claude.ai/code/routines) to create the h
 You are an automated operations assistant. Your task is to send pre-meeting reminders to Telegram.
 
 1. Use the Google Calendar MCP tool to list all events for today and tomorrow.
-2. Filter to events starting between 3 and 6 hours from right now.
+2. Filter to events starting between 11 and 13 hours from right now (approximates "at least 12
+   hours before" with enough width that an hourly cadence can't miss it on drift).
 3. For each matching event, check its description for the marker "[reminder-sent]".
    - If present, skip it — a reminder already went out for this event.
 4. For each remaining matching event, resolve which symbolic chat key it goes to by checking
-   the event title against this table, most-specific-first (checked in this order so a "Bond <>
-   Nebula" meeting doesn't match the looser "Bond" rule first) — these are symbolic keys, not
-   real chat IDs; `webhook-service` resolves the actual chat_id server-side (see
-   `relay-chat-keys.js`), kept in sync with this table by hand:
+   the event title against this table, most-specific-first:
    - Title contains "Bond <> Nebula" -> chatKey "BOND_NEBULA"
+   - Title contains "Bond <> 0g Weekly Sync" -> chatKey "BOND_TEAM"
+   - Title contains "BOND Daily Standup" -> chatKey "BOND_TEAM"
    - Title contains "Bond" -> chatKey "BOND_TEAM"
    - Title contains "ERN Daily Executive Standup" -> chatKey "ERN_EXEC_STANDUP"
+   - Title contains "ERN <> Nebula" -> chatKey "ERN_SUPER_TEAM"
    - Title contains "ERN Daily Sync" -> chatKey "ERN_SUPER_TEAM"
    - No match -> chatKey "ERN_SUPER_TEAM" (send there instead of dropping it, so it stays
      visible to the team rather than in a private ops DM; prefix the message with
      `No routing match for meeting "<title>" — sending agenda here instead.` so someone
      notices and can add a rule)
-5. For each remaining matching event, draft a "Pre-Meeting Agenda" message in this exact
-   structure:
-   a. Opening line: "Hey guys please find here the meeting agenda for today. Please lmk if I
-      missed any items"
-   b. A line listing every attendee's Telegram handle, using the mapping below (attendees not
-      in the mapping are listed by their plain name instead of a handle).
-   c. A title line: "<meeting series name> Agenda" (e.g. "Bond Agenda").
-   d. One section per attendee: their handle (or name) on its own line, then a bullet list of
-      their open items pulled from the event description — the description is expected to
-      contain notes/items already grouped or attributable per attendee; if an item's owner
-      can't be determined, list it under a final "Other" section rather than guessing.
-   Style rules for the bullets, matched to how this team actually writes these by hand (see the
-   real example below) — deviating from these makes the output read as obviously AI-generated:
-   - Terse. Either a short label alone ("Dev SOP", "Nebula KOL"), or a short label + " — " +
-     a brief elaboration ("RE7 / Midas API — confirm resolved => rehash w Turtle"). Never a full
-     sentence, never explanatory prose.
-   - Don't embellish or elaborate beyond what's actually in the source event description. If a
-     note is terse in the source, keep it terse — don't pad it into a fuller sentence.
-   - Variable bullet count per attendee is normal and expected (2 for one person, 5 for
-     another) — this reflects real differences in workload, not an error to correct or a gap to
-     fill with invented items.
-   - No bold, no markdown decoration, no emoji. Plain text only, exactly like a person typing
-     quickly into Telegram — this is a deliberate contrast with the post-meeting *summary*
-     message (which does use bold for deadlines, since that one is LLM-condensed rather than
-     copied near-verbatim from source notes).
+5. For each remaining matching event, draft a "Pre-Meeting Reminder" message in this exact
+   structure — note this groups by TOPIC, not by attendee (a deliberate change from the old
+   per-attendee format, per the 2026-07-04 briefing):
+
+   ⏰ *<meeting series name> — Pre-Meeting Reminder*
+   _Sending ahead of today's call. Please come prepared on the following:_
+
+   ---
+
+   📌 *On the Agenda*
+   • <high-level topic 1, pulled from the event description>
+   • <high-level topic 2>
+
+   ---
+
+   📎 *Please review before joining*
+   • <a specific document, metric, or pending item mentioned in the event description that
+     attendees should look at beforehand — omit this whole section if the description has
+     nothing review-worthy, don't invent one>
+
+   ---
+
+   🕐 _See you on the call. Reply here if you can't make it._
+
+   Tag every attendee (using the mapping below) on the line right after the title, same as
+   today. Group the event description's per-attendee notes UP into shared topics for "On the
+   Agenda" — do not simply relabel each attendee's bullets as a "topic"; a well-formed topic
+   like "RE7 / Midas API" may summarize what was previously one attendee's item, and that's
+   fine. Keep bullets terse, matching the source material's own terseness — don't pad.
    Attendee handle mapping (kept in sync with `webhook-service/src/attendee-handles.js` — a
    Cloud Routine prompt has no code path to require() that file, so update both by hand):
    - Taweh Bey Solowii -> @tawehbeysolowii
    - Vinson Leow -> @vinsonleow
    - Hoa Ha -> @hoaha47
-   - Sowmya Raghavan -> @sowmyaraghavan
+   - Sowmya Raghavan -> @sraghavan
    - Caitlin Sarah -> @caitlinsarah
+   - Red -> @redbeem
+   - Dr. Jonathan -> @jonscott
+   - Keli Whitlock -> @keliwhitlock
+   - Jerad Finck -> @JeradFinck
+   - Rob Christensen has no Telegram handle -- list by plain name, same as any unmapped attendee.
 6. Send the message via the relay, not directly to Telegram: POST
    `{WEBHOOK_RELAY_URL}/relay/telegram-agenda` with header `Authorization: Bearer {RELAY_SECRET}`
    and JSON body `{ "chatKey": "<key resolved in step 4>", "text": "<the drafted message>" }`.
@@ -78,43 +88,17 @@ You are an automated operations assistant. Your task is to send pre-meeting remi
 
 ### Example output (Bond Daily Standup)
 
-Refreshed 2026-07-03 from a real Bond Telegram thread — this is the actual human-posted format
-this routine is automating; note it's already scannable (short bullets, no prose), which is the
-bar the agenda format should stay at (contrast with the post-meeting *summary* path, which has
-had length problems — see ADR-0003's summarizer and the "reduce to a 2 minute read" note there).
-
-```
-Hey guys please find here the meeting agenda for today. Please lmk if I missed any items
-@tawehbeysolowii @vinsonleow @hoaha47 @sowmyaraghavan @caitlinsarah
-Bond Agenda
-
-@tawehbeysolowii
-- RE7 / Midas API — confirm resolved => rehash w Turtle
-- 15 July Live timeline
-- GSR Suggestions
-
-@vinsonleow
-- Dev SOP
-- Nebula KOL
-
-@hoaha47
-- Turtle Documents — confirm outdated TWAP language and soft lock details removed; coordinate with Turtle on DocSend link updates and version control
-- SEO update - pending Red
-- Marketing Lead Applicant: 95 CVs, reviewing, follow up with questions
-- PR - Follow up w PR Genius
-
-@sowmyaraghavan
-- Whitepaper/Vault Strategy — Amber protocol research and multi-chain vault competitive analysis + whitepaper outline
-- Neobank
-```
+Real example pending — the format above changed 2026-07-04 from per-attendee to topic-level;
+refresh this example from the next real send.
 
 Real usage note: attendees often reply inline underneath this message in the same Telegram
-thread (confirming an item, asking a follow-up) — the routine only ever posts the agenda itself
-once per matching event; it doesn't need to handle replies.
+thread (confirming an item, asking a follow-up) — the routine only ever posts the reminder
+itself once per matching event; it doesn't need to handle replies.
 
-## Why the window is 3-6h, not 3-4h
+## Why the window is 11-13h, not 12h exactly
 
 A 1-hour-wide window matched to an hourly cadence has zero tolerance for a routine firing a
-few minutes late — a meeting can slip through uncaught. A 3-hour-wide window guarantees any
-given meeting is caught in at least one run even with some drift, at the cost of needing the
-idempotency marker in step 3/6 to avoid duplicate sends across the runs where it's caught twice.
+few minutes late — a meeting can slip through uncaught. An 11-13h-wide window guarantees any
+given meeting is caught in at least one run even with some drift, while still landing close to
+the "at least 12 hours before" target, at the cost of needing the idempotency marker in step 3/6
+to avoid duplicate sends across the runs where it's caught twice.
