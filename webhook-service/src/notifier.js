@@ -29,12 +29,12 @@ function formatSummaryBody(summary) {
 // summarizer didn't run (raw Fireflies fallback) — in that case this renders overview-only,
 // matching today's simpler behavior rather than forcing an empty Sections block.
 function formatAgendaOverviewBody(summary) {
-    const header = `📋 <b>${escapeHtml(summary.title)} Update</b>\n\n---\n\n📌 <b>Overview</b>\n${withBoldMarkers(summary.overview)}`;
+    const header = `📋 <b>${escapeHtml(summary.title)} Update</b>\n\n📌 <b>Overview</b>\n${withBoldMarkers(summary.overview)}`;
     if (!summary.sections || summary.sections.length === 0) return header;
 
     const sectionBlocks = summary.sections.map((section) => {
         const bullets = section.bullets.map((bullet) => `• ${withBoldMarkers(bullet)}`).join('\n');
-        return `\n\n---\n\n${escapeHtml(section.emoji)} <b>${escapeHtml(section.header)}</b>\n${bullets}`;
+        return `\n\n${escapeHtml(section.emoji)} <b>${escapeHtml(section.header)}</b>\n${bullets}`;
     }).join('');
 
     return `${header}${sectionBlocks}`;
@@ -68,7 +68,7 @@ function formatTodosBody(summary) {
     const sections = splitActionItemsByAssignee(linkifyBoldNames(summary.action_items));
     const itemsBlock = sections.map(withBoldMarkers).join('\n\n---\n\n');
     const recordingLine = summary.recordingUrl
-        ? `\n\n---\n\n🎥 <b>Recording</b>\n${escapeHtml(summary.recordingUrl)}`
+        ? `\n\n🎥 <b>Recording</b>\n${escapeHtml(summary.recordingUrl)}`
         : '';
     const nextStepsLines = (summary.next_steps ?? '')
         .split('\n')
@@ -76,18 +76,26 @@ function formatTodosBody(summary) {
         .filter(Boolean)
         .map((line) => `• ${withBoldMarkers(line)}`)
         .join('\n');
-    const nextStepsBlock = nextStepsLines ? `\n\n---\n\n🔜 <b>Next Steps</b>\n${nextStepsLines}` : '';
+    const nextStepsBlock = nextStepsLines ? `\n\n🔜 <b>Next Steps</b>\n${nextStepsLines}` : '';
 
-    return `✅ <b>Action Items</b>\n\n---\n\n${itemsBlock}${recordingLine}${nextStepsBlock}`;
+    return `✅ <b>Action Items</b>\n\n${itemsBlock}${recordingLine}${nextStepsBlock}`;
 }
 
 function createNotifier({ botToken, opsChatId, unroutedChatId, httpPost = defaultHttpPost }) {
     const url = `https://api.telegram.org/bot${botToken}/sendMessage`;
 
-    function send(chatId, text, parseMode = 'HTML') {
+    async function send(chatId, text, parseMode = 'HTML') {
         const body = { chat_id: chatId, text };
         if (parseMode) body.parse_mode = parseMode;
-        return httpPost(url, body);
+        try {
+            return await httpPost(url, body);
+        } catch (err) {
+            // Surface Telegram's own error description (e.g. "can't parse entities: Unsupported
+            // start tag '<>' at byte offset 42") instead of the generic axios status message,
+            // so ops failures are immediately diagnosable without reading raw logs.
+            const detail = err?.response?.data?.description ?? err.message;
+            throw new Error(`Telegram send failed (${err?.response?.status ?? 'unknown'}): ${detail}`);
+        }
     }
 
     async function notifySummaryTo(chatId, summary) {
