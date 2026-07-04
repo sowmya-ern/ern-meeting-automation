@@ -4,6 +4,8 @@ const { createNotifier } = require('./src/notifier');
 const { createSeenMeetings } = require('./src/seen-meetings');
 const { createMeetingRouter } = require('./src/meeting-router');
 const { createSummarizer } = require('./src/summarizer');
+const { createMeetingHistory } = require('./src/meeting-history');
+const { createHistoryConsolidator } = require('./src/history-consolidator');
 const { buildRoutingRules, assertOrderingIsSafe } = require('./src/routing-table');
 const { buildRelayChatMap } = require('./src/relay-chat-keys');
 
@@ -16,6 +18,18 @@ const relayChatMap = buildRelayChatMap(process.env);
 // unchanged — the same "no lost summaries" path as any other summarizer failure.
 const summarizer = process.env.ANTHROPIC_API_KEY
     ? createSummarizer({ apiKey: process.env.ANTHROPIC_API_KEY })
+    : undefined;
+
+// Optional: if either Supabase var is unset, history tracking is skipped entirely and the
+// pipeline behaves exactly as it does today -- same optionality pattern as ANTHROPIC_API_KEY.
+const meetingHistory = (process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_KEY)
+    ? createMeetingHistory({ url: process.env.SUPABASE_URL, serviceKey: process.env.SUPABASE_SERVICE_KEY })
+    : undefined;
+
+// Consolidation needs both a history store to write to and the same Anthropic key the
+// summarizer already uses -- no separate key required.
+const historyConsolidator = (meetingHistory && process.env.ANTHROPIC_API_KEY)
+    ? createHistoryConsolidator({ apiKey: process.env.ANTHROPIC_API_KEY })
     : undefined;
 
 const app = createApp({
@@ -33,6 +47,8 @@ const app = createApp({
     meetingRouter,
     relayChatMap,
     summarizer,
+    meetingHistory,
+    historyConsolidator,
     onProcessed: (result) => {
         if (result.status === 'failed' || result.status === 'unrouted') {
             console.error('Fireflies webhook processing needs attention:', result);

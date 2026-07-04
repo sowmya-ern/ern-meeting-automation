@@ -168,6 +168,17 @@ otherwise addressed:
 Also fixed in passing: CONTEXT.md's `FirefliesClient` interface line was stale (wrong
 `fetchSummary` signature, missing `attendees`). **44/44 tests pass.**
 
+**Meeting history + cross-meeting consolidation added (2026-07-04), see [ADR-0005](docs/adr/0005-meeting-history-and-consolidation.md).**
+`webhook-service` now persists full meeting history in Supabase (`meeting_history`, append-only)
+and derives per-series open-item tracking + a rolling narrative (`series_state`) via a second,
+separate Anthropic call (`history-consolidator.js`), fed back into `summarizer.js`'s prompt as
+read-only context for the next meeting in that series. Only applies to meetings matching a real
+routing rule — unrouted/one-off meetings are unaffected. Both new env vars
+(`SUPABASE_URL`/`SUPABASE_SERVICE_KEY`) are optional; unset either and the pipeline behaves
+exactly as it did before this change. Manual one-time setup still needed: create the Supabase
+project and run `webhook-service/supabase/schema.sql`, then set the two env vars on Render.
+**79/79 tests pass.**
+
 ## Skills that speed this up
 
 Local (already available in this Claude Code install):
