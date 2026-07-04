@@ -1,6 +1,7 @@
 const axios = require('axios');
-const { handleFor } = require('./attendee-handles');
+const { handleFor, linkifyBoldNames } = require('./attendee-handles');
 const { toHtmlBold } = require('./bold-marker');
+const { getProfile } = require('./company-profiles');
 
 function defaultHttpPost(url, body, config) {
     return axios.post(url, body, config);
@@ -23,6 +24,40 @@ function formatSummaryBody(summary) {
     return `Hey guys please find here the meeting summary for today. Please lmk if anything's missing.\n${mentionsLine}${escapeHtml(summary.title)} Summary\n\nOverview:\n${withBoldMarkers(summary.overview)}\n\nAction Items:\n${withBoldMarkers(summary.action_items)}`;
 }
 
+// Message 2 of the post-meeting pair: title, overview, then one block per summarizer section
+// (department/topic, emoji + bold header, bulleted lines). `sections` is absent whenever the
+// summarizer didn't run (raw Fireflies fallback) — in that case this renders overview-only,
+// matching today's simpler behavior rather than forcing an empty Sections block.
+function formatAgendaOverviewBody(summary) {
+    const header = `📋 <b>${escapeHtml(summary.title)} Update</b>\n\n---\n\n📌 <b>Overview</b>\n${withBoldMarkers(summary.overview)}`;
+    if (!summary.sections || summary.sections.length === 0) return header;
+
+    const sectionBlocks = summary.sections.map((section) => {
+        const bullets = section.bullets.map((bullet) => `• ${withBoldMarkers(bullet)}`).join('\n');
+        return `\n\n---\n\n${escapeHtml(section.emoji)} <b>${escapeHtml(section.header)}</b>\n${bullets}`;
+    }).join('');
+
+    return `${header}${sectionBlocks}`;
+}
+
+// Message 3 of the post-meeting pair: action items (assignee names converted to @handles),
+// recording link (when Fireflies gave us one), Next Steps (when the summarizer produced one).
+function formatTodosBody(summary) {
+    const itemsBlock = withBoldMarkers(linkifyBoldNames(summary.action_items));
+    const recordingLine = summary.recordingUrl
+        ? `\n\n---\n\n🎥 <b>Recording</b>\n${escapeHtml(summary.recordingUrl)}`
+        : '';
+    const nextStepsLines = (summary.next_steps ?? '')
+        .split('\n')
+        .map((line) => line.trim().replace(/^-\s*/, ''))
+        .filter(Boolean)
+        .map((line) => `• ${withBoldMarkers(line)}`)
+        .join('\n');
+    const nextStepsBlock = nextStepsLines ? `\n\n---\n\n🔜 <b>Next Steps</b>\n${nextStepsLines}` : '';
+
+    return `✅ <b>Action Items</b>\n\n---\n\n${itemsBlock}${recordingLine}${nextStepsBlock}`;
+}
+
 function createNotifier({ botToken, opsChatId, unroutedChatId, httpPost = defaultHttpPost }) {
     const url = `https://api.telegram.org/bot${botToken}/sendMessage`;
 
@@ -36,10 +71,16 @@ function createNotifier({ botToken, opsChatId, unroutedChatId, httpPost = defaul
         await send(chatId, formatSummaryBody(summary));
     }
 
+    async function notifyAgendaOverviewTo(chatId, summary) {
+        await send(chatId, formatAgendaOverviewBody(summary));
+    }
+
+    async function notifyTodosTo(chatId, summary) {
+        await send(chatId, formatTodosBody(summary));
+    }
+
     // Relay path for the pre-meeting Cloud Routine (see ADR-0004): the routine composes plain
-    // text itself and never gets the bot token, so this sends it verbatim with no parse_mode —
-    // same "no parse_mode" reasoning the whole notifier used before HTML rendering was added
-    // for the summarizer's bold deadlines, just scoped to this one path.
+    // text itself and never gets the bot token, so this sends it verbatim with no parse_mode.
     async function sendPlainText(chatId, text) {
         await send(chatId, text, null);
     }
@@ -48,12 +89,16 @@ function createNotifier({ botToken, opsChatId, unroutedChatId, httpPost = defaul
         await send(opsChatId, `Error processing meeting ${escapeHtml(meetingId)}: ${escapeHtml(reason)}`);
     }
 
-    async function notifyUnrouted(meetingId, meetingTitle, summary) {
-        const text = `No routing match for meeting "${escapeHtml(meetingTitle)}" (${escapeHtml(meetingId)}) — sending summary here instead.\n\n${formatSummaryBody(summary)}`;
+    async function notifyUnrouted(meetingId, meetingTitle, summary, company) {
+        const profile = company ? getProfile(company) : null;
+        const classificationNote = profile
+            ? ` (title didn't match a known series, classified as ${profile.label} by content)`
+            : '';
+        const text = `No routing match for meeting "${escapeHtml(meetingTitle)}" (${escapeHtml(meetingId)})${escapeHtml(classificationNote)} — sending summary here instead.\n\n${formatSummaryBody(summary)}`;
         await send(unroutedChatId, text);
     }
 
-    return { notifySummaryTo, notifyOpsFailure, notifyUnrouted, sendPlainText };
+    return { notifySummaryTo, notifyAgendaOverviewTo, notifyTodosTo, notifyOpsFailure, notifyUnrouted, sendPlainText };
 }
 
 module.exports = { createNotifier };
