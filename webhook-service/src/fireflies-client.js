@@ -3,7 +3,7 @@ const axios = require('axios');
 const FIREFLIES_URL = 'https://api.fireflies.ai/graphql';
 
 function buildQuery(meetingId) {
-  return `query { transcript(id: "${meetingId}") { title meeting_attendees { displayName } summary { action_items overview } } }`;
+  return `query { transcript(id: "${meetingId}") { title transcript_url meeting_attendees { displayName } summary { action_items overview } } }`;
 }
 
 function defaultSleep(ms) {
@@ -34,7 +34,13 @@ function createFirefliesClient({
 
       if (summary?.overview) {
         const attendees = (transcript.meeting_attendees ?? []).map((a) => a.displayName);
-        return { title: transcript.title, attendees, overview: summary.overview, action_items: summary.action_items };
+        return {
+          title: transcript.title,
+          attendees,
+          overview: summary.overview,
+          action_items: summary.action_items,
+          recordingUrl: transcript.transcript_url ?? null,
+        };
       }
 
       if (attempt < retries) {

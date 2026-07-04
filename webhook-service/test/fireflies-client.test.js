@@ -32,7 +32,7 @@ test('returns the summary on the first successful call', async () => {
 
   const result = await client.fetchSummary('meeting-1');
 
-  assert.deepEqual(result, { title: 'ERN Daily Sync', attendees: [], ...summary });
+  assert.deepEqual(result, { title: 'ERN Daily Sync', attendees: [], recordingUrl: null, ...summary });
   assert.equal(httpPostCalls, 1);
   assert.equal(sleepCalls, 0);
 });
@@ -116,7 +116,29 @@ test('does not call sleep after a successful attempt', async () => {
 
   const result = await client.fetchSummary('meeting-3');
 
-  assert.deepEqual(result, { title: 'ERN Daily Sync', attendees: [], ...summary });
+  assert.deepEqual(result, { title: 'ERN Daily Sync', attendees: [], recordingUrl: null, ...summary });
   assert.equal(httpPostCalls, 2);
   assert.equal(sleepCalls, 1);
+});
+
+test('includes recordingUrl from transcript_url when present', async () => {
+  const summary = { overview: 'ov', action_items: 'ai' };
+  const httpPost = async () => ({
+    data: { data: { transcript: { title: 'Bond Daily Standup', summary, transcript_url: 'https://app.fireflies.ai/view/abc123' } } },
+  });
+
+  const client = createFirefliesClient({ apiKey: 'test-key', retries: 3, delayMs: 1, sleep: fakeSleep, httpPost });
+  const result = await client.fetchSummary('meeting-recording');
+
+  assert.equal(result.recordingUrl, 'https://app.fireflies.ai/view/abc123');
+});
+
+test('recordingUrl is null when transcript_url is absent', async () => {
+  const summary = { overview: 'ov', action_items: 'ai' };
+  const httpPost = async () => ({ data: { data: { transcript: { title: 'ERN Daily Sync', summary } } } });
+
+  const client = createFirefliesClient({ apiKey: 'test-key', retries: 3, delayMs: 1, sleep: fakeSleep, httpPost });
+  const result = await client.fetchSummary('meeting-no-recording');
+
+  assert.equal(result.recordingUrl, null);
 });
