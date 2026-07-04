@@ -5,7 +5,7 @@ const { verifyRelayToken } = require('./verify-relay-token');
 const { resolveRelayChatId } = require('./relay-chat-keys');
 const { handleFirefliesWebhook } = require('./handle-webhook');
 
-function createApp({ secret, relaySecret, firefliesClient, notifier, seenMeetings, meetingRouter, summarizer, relayChatMap, onProcessed }) {
+function createApp({ secret, relaySecret, firefliesClient, notifier, seenMeetings, meetingRouter, summarizer, meetingHistory, historyConsolidator, relayChatMap, onProcessed }) {
     const app = express();
     app.use(express.json({ verify: (req, res, buf) => { req.rawBody = buf; } }));
 
@@ -23,7 +23,10 @@ function createApp({ secret, relaySecret, firefliesClient, notifier, seenMeeting
         // internal { eventType, meetingId } vocabulary here, at the transport boundary, so
         // handle-webhook.js stays agnostic to Fireflies' wire format.
         const { event, meeting_id: meetingId } = req.body ?? {};
-        const result = await handleFirefliesWebhook({ eventType: event, meetingId }, { firefliesClient, notifier, seenMeetings, meetingRouter, summarizer });
+        const result = await handleFirefliesWebhook(
+            { eventType: event, meetingId },
+            { firefliesClient, notifier, seenMeetings, meetingRouter, summarizer, meetingHistory, historyConsolidator }
+        );
         if (onProcessed) onProcessed(result);
     });
 
