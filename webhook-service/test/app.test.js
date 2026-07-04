@@ -16,11 +16,12 @@ function sign(body) {
 }
 
 function startTestServer({ fetchSummaryImpl } = {}) {
-    const calls = { notifyAgendaOverviewTo: [], notifyTodosTo: [], notifyOpsFailure: [], notifyUnrouted: [], sendPlainText: [] };
+    const calls = { notifyPostMeetingTo: [], notifyAgendaOverviewTo: [], notifyTodosTo: [], notifyOpsFailure: [], notifyUnrouted: [], sendPlainText: [] };
     const firefliesClient = {
         fetchSummary: fetchSummaryImpl || (async () => ({ title: ROUTED_TITLE, overview: 'ov', action_items: 'ai' })),
     };
     const notifier = {
+        notifyPostMeetingTo: async (chatId, summary) => { calls.notifyPostMeetingTo.push({ chatId, summary }); },
         notifyAgendaOverviewTo: async (chatId, summary) => { calls.notifyAgendaOverviewTo.push({ chatId, summary }); },
         notifyTodosTo: async (chatId, summary) => { calls.notifyTodosTo.push({ chatId, summary }); },
         notifyOpsFailure: async (meetingId, reason) => { calls.notifyOpsFailure.push({ meetingId, reason }); },
@@ -116,9 +117,8 @@ test('smoke: a validly signed Fireflies V2 "meeting.summarized" webhook is acked
 
         const result = await processed;
         assert.deepEqual(result, { status: 'processed', meetingId: 'smoke-1' });
-        assert.equal(calls.notifyAgendaOverviewTo.length, 1);
-        assert.equal(calls.notifyTodosTo.length, 1);
-        assert.equal(calls.notifyAgendaOverviewTo[0].chatId, 'super-team-chat');
+        assert.equal(calls.notifyPostMeetingTo.length, 1);
+        assert.equal(calls.notifyPostMeetingTo[0].chatId, 'super-team-chat');
         assert.equal(calls.notifyOpsFailure.length, 0);
         assert.equal(calls.notifyUnrouted.length, 0);
     } finally {

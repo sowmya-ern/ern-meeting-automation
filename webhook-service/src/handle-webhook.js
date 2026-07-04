@@ -33,18 +33,13 @@ function resolveCompany(meetingRouter, companyClassifier, rawSummary) {
     return companyClassifier ? companyClassifier.classify(rawSummary) : null;
 }
 
-// Both post-meeting messages are attempted regardless of whether the other fails — a Telegram
-// hiccup on one must not silently drop the other. Any failure is reported to ops without
-// changing the overall 'processed' result, since the pipeline itself completed correctly.
+// Single combined post-meeting message (overview + todos in one Telegram send).
+// Any failure is reported to ops without changing the overall 'processed' result.
 async function sendPostMeetingMessages(notifier, chatId, summary, meetingId) {
-    const results = await Promise.allSettled([
-        notifier.notifyAgendaOverviewTo(chatId, summary),
-        notifier.notifyTodosTo(chatId, summary),
-    ]);
-    const failures = results.filter((r) => r.status === 'rejected');
-    if (failures.length > 0) {
-        const reasons = failures.map((r) => r.reason?.message ?? String(r.reason)).join('; ');
-        await notifier.notifyOpsFailure(meetingId, `one or more post-meeting messages failed: ${reasons}`).catch(() => {});
+    try {
+        await notifier.notifyPostMeetingTo(chatId, summary);
+    } catch (err) {
+        await notifier.notifyOpsFailure(meetingId, `post-meeting message failed: ${err.message}`).catch(() => {});
     }
 }
 

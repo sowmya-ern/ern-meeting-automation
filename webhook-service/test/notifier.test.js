@@ -55,7 +55,7 @@ test('notifySummaryTo opens with an @mention line built from attendee display na
 
     const { text } = calls[0].body;
     assert.match(text, /@tawehbeysolowii @vinsonleow Random Guest/);
-    assert.match(text, /Bond Daily Standup Summary/);
+    assert.match(text, /Bond Daily Standup Update/);
 });
 
 test('sendPlainText posts the given text to the given chatId with no parse_mode', async () => {
@@ -188,7 +188,7 @@ test('notifyTodosTo inserts a divider between assignee sections even when the mo
     });
 
     const { text } = calls[0].body;
-    assert.match(text, /<b>@vinsonleow<\/b>\nGet the doc\.\n\n---\n\n<b>Someone Unmapped<\/b>\nSend the update\./);
+    assert.match(text, /<b>@vinsonleow<\/b>\n• Get the doc\.\n\n<b>Someone Unmapped<\/b>\n• Send the update\./);
 });
 
 test('notifyTodosTo omits the recording line and Next Steps section when absent', async () => {

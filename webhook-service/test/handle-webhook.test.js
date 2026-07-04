@@ -6,7 +6,7 @@ const { createSeenMeetings } = require('../src/seen-meetings');
 const { createMeetingRouter } = require('../src/meeting-router');
 
 function fakeDeps({ summary = { title: 'ERN Daily Sync', overview: 'ov', action_items: 'ai' }, fetchSummaryImpl, meetingRouter, companyClassifier } = {}) {
-    const calls = { fetchSummary: 0, notifyAgendaOverviewTo: 0, notifyTodosTo: 0, notifyOpsFailure: 0, notifyUnrouted: 0 };
+    const calls = { fetchSummary: 0, notifyPostMeetingTo: 0, notifyAgendaOverviewTo: 0, notifyTodosTo: 0, notifyOpsFailure: 0, notifyUnrouted: 0 };
     const firefliesClient = {
         fetchSummary: async (meetingId) => {
             calls.fetchSummary += 1;
@@ -15,6 +15,7 @@ function fakeDeps({ summary = { title: 'ERN Daily Sync', overview: 'ov', action_
         },
     };
     const notifier = {
+        notifyPostMeetingTo: async () => { calls.notifyPostMeetingTo += 1; },
         notifyAgendaOverviewTo: async () => { calls.notifyAgendaOverviewTo += 1; },
         notifyTodosTo: async () => { calls.notifyTodosTo += 1; },
         notifyOpsFailure: async () => { calls.notifyOpsFailure += 1; },
@@ -45,12 +46,11 @@ test('returns duplicate on a second call for the same meetingId without calling 
     assert.equal(deps.calls.fetchSummary, 1, 'firefliesClient should not be called again');
 });
 
-test('sends both the Agenda/Overview and To-Dos messages to the routed chat on success', async () => {
+test('sends a single combined post-meeting message to the routed chat on success', async () => {
     const deps = fakeDeps({ summary: { title: 'ERN Daily Sync', overview: 'ov', action_items: 'ai' } });
     const result = await handleFirefliesWebhook({ eventType: 'meeting.summarized', meetingId: 'm2' }, deps);
     assert.equal(result.status, 'processed');
-    assert.equal(deps.calls.notifyAgendaOverviewTo, 1);
-    assert.equal(deps.calls.notifyTodosTo, 1);
+    assert.equal(deps.calls.notifyPostMeetingTo, 1);
     assert.equal(deps.calls.notifyOpsFailure, 0);
     assert.equal(deps.calls.notifyUnrouted, 0);
 });
@@ -60,8 +60,7 @@ test('calls notifier.notifyOpsFailure when fetchSummary resolves null', async ()
     const result = await handleFirefliesWebhook({ eventType: 'meeting.summarized', meetingId: 'm3' }, deps);
     assert.equal(result.status, 'failed');
     assert.equal(deps.calls.notifyOpsFailure, 1);
-    assert.equal(deps.calls.notifyAgendaOverviewTo, 0);
-    assert.equal(deps.calls.notifyTodosTo, 0);
+    assert.equal(deps.calls.notifyPostMeetingTo, 0);
 });
 
 test('calls notifier.notifyOpsFailure when fetchSummary throws', async () => {
@@ -82,31 +81,29 @@ test('calls notifier.notifyUnrouted when no routing rule matches the meeting tit
 
 test('uses the summarizer to simplify the summary before notifying, when a summarizer is provided', async () => {
     const deps = fakeDeps({ summary: { title: 'ERN Daily Sync', attendees: ['A'], overview: 'long overview', action_items: 'long items' } });
-    let notifiedOverview, notifiedTodos;
-    deps.notifier.notifyAgendaOverviewTo = async (chatId, summary) => { deps.calls.notifyAgendaOverviewTo += 1; notifiedOverview = summary; };
-    deps.notifier.notifyTodosTo = async (chatId, summary) => { deps.calls.notifyTodosTo += 1; notifiedTodos = summary; };
+    let notifiedSummary;
+    deps.notifier.notifyPostMeetingTo = async (chatId, summary) => { deps.calls.notifyPostMeetingTo += 1; notifiedSummary = summary; };
     const summarizer = { simplify: async () => ({ overview: 'short overview', sections: [], action_items: 'short items', next_steps: '' }) };
 
     const result = await handleFirefliesWebhook({ eventType: 'meeting.summarized', meetingId: 'm6' }, { ...deps, summarizer });
 
     assert.equal(result.status, 'processed');
-    assert.equal(notifiedOverview.overview, 'short overview');
-    assert.equal(notifiedTodos.action_items, 'short items');
-    assert.equal(notifiedOverview.title, 'ERN Daily Sync', 'title/attendees should pass through unchanged');
+    assert.equal(notifiedSummary.overview, 'short overview');
+    assert.equal(notifiedSummary.action_items, 'short items');
+    assert.equal(notifiedSummary.title, 'ERN Daily Sync', 'title/attendees should pass through unchanged');
 });
 
 test('falls back to the raw summary when the summarizer throws', async () => {
     const deps = fakeDeps({ summary: { title: 'ERN Daily Sync', overview: 'long overview', action_items: 'long items' } });
-    let notifiedOverview, notifiedTodos;
-    deps.notifier.notifyAgendaOverviewTo = async (chatId, summary) => { deps.calls.notifyAgendaOverviewTo += 1; notifiedOverview = summary; };
-    deps.notifier.notifyTodosTo = async (chatId, summary) => { deps.calls.notifyTodosTo += 1; notifiedTodos = summary; };
+    let notifiedSummary;
+    deps.notifier.notifyPostMeetingTo = async (chatId, summary) => { deps.calls.notifyPostMeetingTo += 1; notifiedSummary = summary; };
     const summarizer = { simplify: async () => { throw new Error('anthropic api down'); } };
 
     const result = await handleFirefliesWebhook({ eventType: 'meeting.summarized', meetingId: 'm7' }, { ...deps, summarizer });
 
     assert.equal(result.status, 'processed');
-    assert.equal(notifiedOverview.overview, 'long overview');
-    assert.equal(notifiedTodos.action_items, 'long items');
+    assert.equal(notifiedSummary.overview, 'long overview');
+    assert.equal(notifiedSummary.action_items, 'long items');
     assert.equal(deps.calls.notifyOpsFailure, 0, 'a summarizer failure must not be treated as a processing failure');
 });
 
@@ -197,8 +194,7 @@ test('a historyConsolidator failure does not block the summary, does not call no
     );
 
     assert.equal(result.status, 'processed');
-    assert.equal(deps.calls.notifyAgendaOverviewTo, 1);
-    assert.equal(deps.calls.notifyTodosTo, 1);
+    assert.equal(deps.calls.notifyPostMeetingTo, 1);
     assert.equal(deps.calls.notifyOpsFailure, 0);
     assert.equal(historyCalls.appendHistory, 0);
     assert.equal(historyCalls.upsertSeriesState, 0);
@@ -229,28 +225,13 @@ test('falls back to the content classifier for company when the title has no rou
     assert.equal(unroutedCompany, 'BOND');
 });
 
-test('both post-meeting messages are attempted independently — a failure in one does not block the other', async () => {
+test('a post-meeting send failure is reported to ops and does not crash the pipeline', async () => {
     const deps = fakeDeps({ summary: { title: 'ERN Daily Sync', overview: 'ov', action_items: 'ai' } });
-    deps.notifier.notifyAgendaOverviewTo = async () => { deps.calls.notifyAgendaOverviewTo += 1; throw new Error('telegram down'); };
-    deps.notifier.notifyTodosTo = async () => { deps.calls.notifyTodosTo += 1; };
+    deps.notifier.notifyPostMeetingTo = async () => { deps.calls.notifyPostMeetingTo += 1; throw new Error('telegram down'); };
 
     const result = await handleFirefliesWebhook({ eventType: 'meeting.summarized', meetingId: 'm14' }, deps);
 
     assert.equal(result.status, 'processed');
-    assert.equal(deps.calls.notifyAgendaOverviewTo, 1);
-    assert.equal(deps.calls.notifyTodosTo, 1, 'the To-Dos send must still be attempted even though Agenda/Overview failed');
-    assert.equal(deps.calls.notifyOpsFailure, 1, 'the partial failure must be reported to ops');
-});
-
-test('the reverse partial failure (To-Dos fails, Agenda/Overview succeeds) is also both-attempted and reported', async () => {
-    const deps = fakeDeps({ summary: { title: 'ERN Daily Sync', overview: 'ov', action_items: 'ai' } });
-    deps.notifier.notifyAgendaOverviewTo = async () => { deps.calls.notifyAgendaOverviewTo += 1; };
-    deps.notifier.notifyTodosTo = async () => { deps.calls.notifyTodosTo += 1; throw new Error('telegram down'); };
-
-    const result = await handleFirefliesWebhook({ eventType: 'meeting.summarized', meetingId: 'm15' }, deps);
-
-    assert.equal(result.status, 'processed');
-    assert.equal(deps.calls.notifyAgendaOverviewTo, 1);
-    assert.equal(deps.calls.notifyTodosTo, 1);
-    assert.equal(deps.calls.notifyOpsFailure, 1);
+    assert.equal(deps.calls.notifyPostMeetingTo, 1);
+    assert.equal(deps.calls.notifyOpsFailure, 1, 'the failure must be reported to ops');
 });
