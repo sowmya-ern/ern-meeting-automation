@@ -35,3 +35,24 @@ test('returns null for a missing/empty title without throwing', () => {
     assert.equal(router.resolveChatId(undefined), null);
     assert.equal(router.resolveChatId(''), null);
 });
+
+const RULES_WITH_SERIES = [
+    { match: 'Bond <> Nebula', chatId: 'bond-nebula-chat', seriesKey: 'BOND_NEBULA' },
+    { match: 'Bond', chatId: 'bond-team-chat', seriesKey: 'BOND_TEAM' },
+];
+
+test('resolveSeriesKey resolves the most specific rule first, same ordering as resolveChatId', () => {
+    const router = createMeetingRouter(RULES_WITH_SERIES);
+    assert.equal(router.resolveSeriesKey('Bond <> Nebula weekly sync'), 'BOND_NEBULA');
+    assert.equal(router.resolveSeriesKey('Bond daily standup'), 'BOND_TEAM');
+});
+
+test('resolveSeriesKey returns null when no rule matches', () => {
+    const router = createMeetingRouter(RULES_WITH_SERIES);
+    assert.equal(router.resolveSeriesKey('Random 1:1'), null);
+});
+
+test('resolveSeriesKey returns null when rules have no seriesKey field (backward compatible)', () => {
+    const router = createMeetingRouter(RULES);
+    assert.equal(router.resolveSeriesKey('Bond daily standup'), null);
+});

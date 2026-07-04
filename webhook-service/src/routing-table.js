@@ -8,10 +8,10 @@
 // both when this table changes.
 function buildRoutingRules(env) {
   return [
-    { match: 'Bond <> Nebula', chatId: env.TELEGRAM_CHAT_BOND_NEBULA },
-    { match: 'Bond', chatId: env.TELEGRAM_CHAT_BOND_TEAM },
-    { match: 'ERN Daily Executive Standup', chatId: env.TELEGRAM_CHAT_ERN_EXEC_STANDUP },
-    { match: 'ERN Daily Sync', chatId: env.TELEGRAM_CHAT_ERN_SUPER_TEAM },
+    { match: 'Bond <> Nebula', chatId: env.TELEGRAM_CHAT_BOND_NEBULA, seriesKey: 'BOND_NEBULA' },
+    { match: 'Bond', chatId: env.TELEGRAM_CHAT_BOND_TEAM, seriesKey: 'BOND_TEAM' },
+    { match: 'ERN Daily Executive Standup', chatId: env.TELEGRAM_CHAT_ERN_EXEC_STANDUP, seriesKey: 'ERN_EXEC_STANDUP' },
+    { match: 'ERN Daily Sync', chatId: env.TELEGRAM_CHAT_ERN_SUPER_TEAM, seriesKey: 'ERN_SUPER_TEAM' },
   ];
 }
 

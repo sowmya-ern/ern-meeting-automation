@@ -82,3 +82,33 @@ test('simplify() sends a prompt banning semicolon-chained overview sentences, ba
   assert.match(prompt, /append "\(TBC\)"/);
   assert.match(prompt, /append "\(outcome: TBC\)"/);
 });
+
+test('simplify() includes prior open items and narrative in the prompt when a seriesState is passed', async () => {
+  const calls = [];
+  const httpPost = async (url, body) => {
+    calls.push({ body });
+    return { data: { content: [{ type: 'text', text: 'OVERVIEW:\nOne.\n\nACTION_ITEMS:\n**Name**\nGet the doc.' }] } };
+  };
+  const summarizer = createSummarizer({ apiKey: 'test-key', httpPost });
+
+  const seriesState = { open_items: [{ text: 'Old item', assignee: 'B', status: 'open' }], narrative: 'Prior narrative text.' };
+  await summarizer.simplify({ title: 'Meet', attendees: [], overview: 'ov', action_items: 'ai' }, seriesState);
+
+  const prompt = calls[0].body.messages[0].content;
+  assert.match(prompt, /Old item/);
+  assert.match(prompt, /Prior narrative text\./);
+});
+
+test('simplify() omits the series-context block entirely when seriesState is not passed (backward compatible)', async () => {
+  const calls = [];
+  const httpPost = async (url, body) => {
+    calls.push({ body });
+    return { data: { content: [{ type: 'text', text: 'OVERVIEW:\nOne.\n\nACTION_ITEMS:\n**Name**\nGet the doc.' }] } };
+  };
+  const summarizer = createSummarizer({ apiKey: 'test-key', httpPost });
+
+  await summarizer.simplify({ title: 'Meet', attendees: [], overview: 'ov', action_items: 'ai' });
+
+  const prompt = calls[0].body.messages[0].content;
+  assert.doesNotMatch(prompt, /Prior open items/);
+});

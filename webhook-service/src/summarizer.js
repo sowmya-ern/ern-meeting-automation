@@ -11,9 +11,14 @@ OVERVIEW:
 ACTION_ITEMS:
 <grouped by assignee under a "**Name**" heading; each item opens with a deliverable verb naming what changes as a result (Get/Send/Confirm/Update/Schedule or similar) — never a bare process verb alone (discuss/follow up/coordinate/review) with no concrete outcome attached; no timestamps; where two assignees share an overlapping task, merge it into one item noting joint ownership; if an item has no clear deadline, do not guess one — append "(TBC)"; if no concrete deliverable can be identified for an item, use the closest honest verb and append "(outcome: TBC)" rather than inventing specificity; ${BOLD_MARKER_SYNTAX_HINT}>`;
 
-function buildPrompt({ title, attendees, overview, action_items }) {
-  return `${RULES}
+function buildPrompt({ title, attendees, overview, action_items }, seriesState) {
+  const hasContext = seriesState && ((seriesState.open_items && seriesState.open_items.length) || seriesState.narrative);
+  const contextBlock = hasContext
+    ? `\nPrior open items and narrative for this meeting series (for reference only -- you may note an item is recurring, but do not invent detail beyond what's here):\nOpen items:\n${JSON.stringify(seriesState.open_items ?? [], null, 2)}\nNarrative so far:\n${seriesState.narrative ?? ''}\n`
+    : '';
 
+  return `${RULES}
+${contextBlock}
 Meeting: ${title}
 Attendees: ${(attendees ?? []).join(', ')}
 
@@ -37,10 +42,10 @@ function defaultHttpPost(url, body, config) {
 }
 
 function createSummarizer({ apiKey, model = 'claude-sonnet-5', maxTokens = 1024, httpPost = defaultHttpPost }) {
-  async function simplify(summary) {
+  async function simplify(summary, seriesState) {
     const response = await httpPost(
       ANTHROPIC_URL,
-      { model, max_tokens: maxTokens, messages: [{ role: 'user', content: buildPrompt(summary) }] },
+      { model, max_tokens: maxTokens, messages: [{ role: 'user', content: buildPrompt(summary, seriesState) }] },
       { headers: { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' } }
     );
 
