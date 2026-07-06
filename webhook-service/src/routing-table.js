@@ -19,6 +19,8 @@ function buildRoutingRules(env) {
     { match: 'ERN <> Nebula', chatId: env.TELEGRAM_CHAT_ERN_NEBULA, seriesKey: 'ERN_NEBULA', company: 'ERN', isExternalFacing: true },
     { match: 'ERN Daily Sync', chatId: env.TELEGRAM_CHAT_ERN_SUPER_TEAM, seriesKey: 'ERN_SUPER_TEAM', company: 'ERN', isExternalFacing: false },
     { match: 'ERN Catchup', chatId: env.TELEGRAM_CHAT_ERN_SUPER_TEAM, seriesKey: 'ERN_SUPER_TEAM', company: 'ERN', isExternalFacing: false },
+    { match: 'Sowmya / Vinson', chatId: env.TELEGRAM_CHAT_ERN_SUPER_TEAM, seriesKey: 'ERN_SUPER_TEAM', company: 'ERN', isExternalFacing: false },
+    { match: 'Vinson / Sowmya', chatId: env.TELEGRAM_CHAT_ERN_SUPER_TEAM, seriesKey: 'ERN_SUPER_TEAM', company: 'ERN', isExternalFacing: false },
     { match: 'ERN', chatId: env.TELEGRAM_CHAT_ERN_SUPER_TEAM, seriesKey: 'ERN_SUPER_TEAM', company: 'ERN', isExternalFacing: false },
   ];
 }

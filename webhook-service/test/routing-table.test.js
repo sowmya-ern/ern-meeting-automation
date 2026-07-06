@@ -20,6 +20,8 @@ test('buildRoutingRules reads each chat ID from the given env object, most-speci
     { match: 'ERN <> Nebula', chatId: 'ern-nebula-chat', seriesKey: 'ERN_NEBULA', company: 'ERN', isExternalFacing: true },
     { match: 'ERN Daily Sync', chatId: 'super-chat', seriesKey: 'ERN_SUPER_TEAM', company: 'ERN', isExternalFacing: false },
     { match: 'ERN Catchup', chatId: 'super-chat', seriesKey: 'ERN_SUPER_TEAM', company: 'ERN', isExternalFacing: false },
+    { match: 'Sowmya / Vinson', chatId: 'super-chat', seriesKey: 'ERN_SUPER_TEAM', company: 'ERN', isExternalFacing: false },
+    { match: 'Vinson / Sowmya', chatId: 'super-chat', seriesKey: 'ERN_SUPER_TEAM', company: 'ERN', isExternalFacing: false },
     { match: 'ERN', chatId: 'super-chat', seriesKey: 'ERN_SUPER_TEAM', company: 'ERN', isExternalFacing: false },
   ]);
 });
