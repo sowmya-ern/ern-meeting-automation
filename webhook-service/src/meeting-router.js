@@ -27,7 +27,18 @@ function createMeetingRouter(rules) {
         return (rule && rule.company) || null;
     }
 
-    return { resolveChatId, resolveSeriesKey, resolveCompany };
+    // Feature 8: returns the full matched rule object (or null) — used by handle-webhook
+    // to pass isExternalFacing into the summarizer context.
+    function routeMeeting(meetingTitle) {
+        return findRule(meetingTitle);
+    }
+
+    function resolveIsExternalFacing(meetingTitle) {
+        const rule = findRule(meetingTitle);
+        return !!(rule && rule.isExternalFacing);
+    }
+
+    return { resolveChatId, resolveSeriesKey, resolveCompany, routeMeeting, resolveIsExternalFacing };
 }
 
 module.exports = { createMeetingRouter };

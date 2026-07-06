@@ -12,15 +12,15 @@ test('buildRoutingRules reads each chat ID from the given env object, most-speci
   };
   const rules = buildRoutingRules(env);
   assert.deepEqual(rules, [
-    { match: 'Bond <> Nebula', chatId: 'nebula-chat', seriesKey: 'BOND_NEBULA', company: 'BOND' },
-    { match: 'Bond <> 0g Weekly Sync', chatId: 'bond-chat', seriesKey: 'BOND_TEAM', company: 'BOND' },
-    { match: 'BOND Daily Standup', chatId: 'bond-chat', seriesKey: 'BOND_TEAM', company: 'BOND' },
-    { match: 'Bond', chatId: 'bond-chat', seriesKey: 'BOND_TEAM', company: 'BOND' },
-    { match: 'ERN Daily Executive Standup', chatId: 'exec-chat', seriesKey: 'ERN_EXEC_STANDUP', company: 'ERN' },
-    { match: 'ERN <> Nebula', chatId: 'ern-nebula-chat', seriesKey: 'ERN_NEBULA', company: 'ERN' },
-    { match: 'ERN Daily Sync', chatId: 'super-chat', seriesKey: 'ERN_SUPER_TEAM', company: 'ERN' },
-    { match: 'ERN Catchup', chatId: 'super-chat', seriesKey: 'ERN_SUPER_TEAM', company: 'ERN' },
-    { match: 'ERN', chatId: 'super-chat', seriesKey: 'ERN_SUPER_TEAM', company: 'ERN' },
+    { match: 'Bond <> Nebula', chatId: 'nebula-chat', seriesKey: 'BOND_NEBULA', company: 'BOND', isExternalFacing: true },
+    { match: 'Bond <> 0g Weekly Sync', chatId: 'bond-chat', seriesKey: 'BOND_TEAM', company: 'BOND', isExternalFacing: true },
+    { match: 'BOND Daily Standup', chatId: 'bond-chat', seriesKey: 'BOND_TEAM', company: 'BOND', isExternalFacing: false },
+    { match: 'Bond', chatId: 'bond-chat', seriesKey: 'BOND_TEAM', company: 'BOND', isExternalFacing: false },
+    { match: 'ERN Daily Executive Standup', chatId: 'exec-chat', seriesKey: 'ERN_EXEC_STANDUP', company: 'ERN', isExternalFacing: false },
+    { match: 'ERN <> Nebula', chatId: 'ern-nebula-chat', seriesKey: 'ERN_NEBULA', company: 'ERN', isExternalFacing: true },
+    { match: 'ERN Daily Sync', chatId: 'super-chat', seriesKey: 'ERN_SUPER_TEAM', company: 'ERN', isExternalFacing: false },
+    { match: 'ERN Catchup', chatId: 'super-chat', seriesKey: 'ERN_SUPER_TEAM', company: 'ERN', isExternalFacing: false },
+    { match: 'ERN', chatId: 'super-chat', seriesKey: 'ERN_SUPER_TEAM', company: 'ERN', isExternalFacing: false },
   ]);
 });
 

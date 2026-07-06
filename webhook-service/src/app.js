@@ -5,7 +5,7 @@ const { verifyRelayToken } = require('./verify-relay-token');
 const { resolveRelayChatId } = require('./relay-chat-keys');
 const { handleFirefliesWebhook } = require('./handle-webhook');
 
-function createApp({ secret, relaySecret, firefliesClient, notifier, seenMeetings, meetingRouter, summarizer, companyClassifier, meetingHistory, historyConsolidator, relayChatMap, onProcessed }) {
+function createApp({ secret, relaySecret, firefliesClient, notifier, seenMeetings, meetingRouter, summarizer, companyClassifier, meetingHistory, historyConsolidator, relayChatMap, onProcessed, voiceMemoHandler }) {
     const app = express();
     app.use(express.json({ verify: (req, res, buf) => { req.rawBody = buf; } }));
 
@@ -81,6 +81,21 @@ function createApp({ secret, relaySecret, firefliesClient, notifier, seenMeeting
             console.error('Failed to generate/send pre-meeting reminder:', err);
             res.status(500).send('Internal Server Error');
         }
+    });
+
+    // Feature 12: Telegram bot webhook — receives all updates sent to the bot.
+    // Currently handles voice memos only; other update types are silently ignored.
+    // Set the webhook URL in Telegram via:
+    //   POST https://api.telegram.org/bot{TOKEN}/setWebhook?url=https://{host}/telegram-bot
+    app.post('/telegram-bot', async (req, res) => {
+        res.status(200).send('OK'); // Always 200 immediately — Telegram retries on non-200
+        if (!voiceMemoHandler) return;
+        const update = req.body ?? {};
+        // Resolve seriesKey from the chat title or description if available
+        const chatTitle = update?.message?.chat?.title ?? '';
+        const route = meetingRouter.routeMeeting(chatTitle);
+        const seriesKey = route ? route.seriesKey : null;
+        await voiceMemoHandler.handleUpdate(update, { meetingHistory, seriesKey }).catch(() => {});
     });
 
     return app;

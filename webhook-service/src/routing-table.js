@@ -7,16 +7,19 @@
 // Cloud Routine prompt has no code path to require() this file (ADR-0001/0002), so update
 // both when this table changes.
 function buildRoutingRules(env) {
+  // isExternalFacing=true: Feature 8 — these meetings involve external partners/vendors.
+  // The summarizer will apply an external-safe filter (strip valuations, internal friction,
+  // candid commentary) before sending. Internal-only meetings leave this flag absent/false.
   return [
-    { match: 'Bond <> Nebula', chatId: env.TELEGRAM_CHAT_BOND_NEBULA, seriesKey: 'BOND_NEBULA', company: 'BOND' },
-    { match: 'Bond <> 0g Weekly Sync', chatId: env.TELEGRAM_CHAT_BOND_TEAM, seriesKey: 'BOND_TEAM', company: 'BOND' },
-    { match: 'BOND Daily Standup', chatId: env.TELEGRAM_CHAT_BOND_TEAM, seriesKey: 'BOND_TEAM', company: 'BOND' },
-    { match: 'Bond', chatId: env.TELEGRAM_CHAT_BOND_TEAM, seriesKey: 'BOND_TEAM', company: 'BOND' },
-    { match: 'ERN Daily Executive Standup', chatId: env.TELEGRAM_CHAT_ERN_EXEC_STANDUP, seriesKey: 'ERN_EXEC_STANDUP', company: 'ERN' },
-    { match: 'ERN <> Nebula', chatId: env.TELEGRAM_CHAT_ERN_NEBULA, seriesKey: 'ERN_NEBULA', company: 'ERN' },
-    { match: 'ERN Daily Sync', chatId: env.TELEGRAM_CHAT_ERN_SUPER_TEAM, seriesKey: 'ERN_SUPER_TEAM', company: 'ERN' },
-    { match: 'ERN Catchup', chatId: env.TELEGRAM_CHAT_ERN_SUPER_TEAM, seriesKey: 'ERN_SUPER_TEAM', company: 'ERN' },
-    { match: 'ERN', chatId: env.TELEGRAM_CHAT_ERN_SUPER_TEAM, seriesKey: 'ERN_SUPER_TEAM', company: 'ERN' },
+    { match: 'Bond <> Nebula', chatId: env.TELEGRAM_CHAT_BOND_NEBULA, seriesKey: 'BOND_NEBULA', company: 'BOND', isExternalFacing: true },
+    { match: 'Bond <> 0g Weekly Sync', chatId: env.TELEGRAM_CHAT_BOND_TEAM, seriesKey: 'BOND_TEAM', company: 'BOND', isExternalFacing: true },
+    { match: 'BOND Daily Standup', chatId: env.TELEGRAM_CHAT_BOND_TEAM, seriesKey: 'BOND_TEAM', company: 'BOND', isExternalFacing: false },
+    { match: 'Bond', chatId: env.TELEGRAM_CHAT_BOND_TEAM, seriesKey: 'BOND_TEAM', company: 'BOND', isExternalFacing: false },
+    { match: 'ERN Daily Executive Standup', chatId: env.TELEGRAM_CHAT_ERN_EXEC_STANDUP, seriesKey: 'ERN_EXEC_STANDUP', company: 'ERN', isExternalFacing: false },
+    { match: 'ERN <> Nebula', chatId: env.TELEGRAM_CHAT_ERN_NEBULA, seriesKey: 'ERN_NEBULA', company: 'ERN', isExternalFacing: true },
+    { match: 'ERN Daily Sync', chatId: env.TELEGRAM_CHAT_ERN_SUPER_TEAM, seriesKey: 'ERN_SUPER_TEAM', company: 'ERN', isExternalFacing: false },
+    { match: 'ERN Catchup', chatId: env.TELEGRAM_CHAT_ERN_SUPER_TEAM, seriesKey: 'ERN_SUPER_TEAM', company: 'ERN', isExternalFacing: false },
+    { match: 'ERN', chatId: env.TELEGRAM_CHAT_ERN_SUPER_TEAM, seriesKey: 'ERN_SUPER_TEAM', company: 'ERN', isExternalFacing: false },
   ];
 }
 

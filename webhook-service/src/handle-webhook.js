@@ -66,7 +66,31 @@ async function consolidateHistoryBestEffort({ meetingHistory, historyConsolidato
     }
 }
 
-async function handleFirefliesWebhook({ eventType, meetingId }, { firefliesClient, notifier, seenMeetings, meetingRouter, summarizer, companyClassifier, meetingHistory, historyConsolidator }) {
+// Feature 11: Best-effort cross-meeting conflict detection.
+// Runs after history consolidation; fetches the other company's series states and checks
+// for contradictions. Flags any conflicts to the ops chat. Never blocks the main pipeline.
+async function detectConflictsBestEffort({ conflictDetector, meetingHistory, notifier, company }) {
+    if (!conflictDetector || !meetingHistory) return;
+    try {
+        // Fetch the consolidated series states for both companies
+        const bondState = await meetingHistory.getSeriesState('BOND_TEAM').catch(() => null);
+        const ernState = await meetingHistory.getSeriesState('ERN_SUPER_TEAM').catch(() => null);
+        if (!bondState || !ernState) return;
+
+        const conflicts = await conflictDetector.detect({ bondSeriesState: bondState, ernSeriesState: ernState });
+        if (!conflicts || conflicts.length === 0) return;
+
+        const lines = conflicts.map((c) =>
+            `⚠️ Conflict detected:\n• Bond: ${c.bond_item}\n• ERN: ${c.ern_item}\n• Issue: ${c.summary}`
+        );
+        const message = `🔴 Cross-Meeting Conflict Alert\n\n${lines.join('\n\n')}`;
+        await notifier.notifyOpsMessage(message).catch(() => {});
+    } catch {
+        // swallow — best-effort
+    }
+}
+
+async function handleFirefliesWebhook({ eventType, meetingId }, { firefliesClient, notifier, seenMeetings, meetingRouter, summarizer, companyClassifier, meetingHistory, historyConsolidator, conflictDetector }) {
     if (eventType !== MEETING_SUMMARIZED) {
         return { status: 'ignored', meetingId };
     }
@@ -88,7 +112,9 @@ async function handleFirefliesWebhook({ eventType, meetingId }, { firefliesClien
         const seriesState = await fetchSeriesStateOrNull(meetingHistory, seriesKey);
         const company = resolveCompany(meetingRouter, companyClassifier, rawSummary);
 
-        const summary = await simplifyOrFallback(summarizer, rawSummary, { seriesState, company });
+        // Feature 7: pass speaker attributions; Feature 8: pass isExternalFacing flag
+        const isExternalFacing = meetingRouter.resolveIsExternalFacing(rawSummary.title);
+        const summary = await simplifyOrFallback(summarizer, rawSummary, { seriesState, company, speakerAttributions: rawSummary.speakerAttributions ?? [], isExternalFacing });
 
         const chatId = meetingRouter.resolveChatId(summary.title);
         if (!chatId) {
@@ -101,6 +127,9 @@ async function handleFirefliesWebhook({ eventType, meetingId }, { firefliesClien
         if (seriesKey) {
             await consolidateHistoryBestEffort({ meetingHistory, historyConsolidator, seriesKey, seriesState, meetingId, rawSummary, condensedSummary: summary });
         }
+
+        // Feature 11: check for cross-company contradictions after history is updated
+        await detectConflictsBestEffort({ conflictDetector, meetingHistory, notifier, company });
 
         return { status: 'processed', meetingId };
     } catch (error) {

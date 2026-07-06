@@ -42,6 +42,23 @@ function parseResponse(text) {
   return { open_items, narrative };
 }
 
+// Feature 2: After the LLM returns the new open_items, increment carry_over_count for any
+// item that was already open in the prior state and is still open now (same text + assignee).
+// New items start at carry_over_count=0. Closed items are left unchanged (closed_reason preserved).
+function applyCarryOverCounts(priorItems, newItems) {
+  const priorMap = new Map(
+    (priorItems ?? []).map((item) => [`${item.assignee}::${item.text}`, item])
+  );
+  return newItems.map((item) => {
+    if (item.status === 'closed') return item;
+    const prior = priorMap.get(`${item.assignee}::${item.text}`);
+    if (prior && prior.status === 'open') {
+      return { ...item, carry_over_count: (prior.carry_over_count ?? 0) + 1 };
+    }
+    return { ...item, carry_over_count: 0 };
+  });
+}
+
 function defaultHttpPost(url, body, config) {
   return axios.post(url, body, config);
 }
@@ -60,7 +77,10 @@ function createHistoryConsolidator({ apiKey, model = 'claude-sonnet-5', maxToken
     if (!text) {
       throw new Error('history-consolidator response had no text content');
     }
-    return parseResponse(text);
+    const result = parseResponse(text);
+    // Feature 2: increment carry_over_count for items still open from the prior state
+    result.open_items = applyCarryOverCounts(seriesState?.open_items, result.open_items);
+    return result;
   }
 
   return { consolidate };

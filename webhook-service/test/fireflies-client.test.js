@@ -32,7 +32,7 @@ test('returns the summary on the first successful call', async () => {
 
   const result = await client.fetchSummary('meeting-1');
 
-  assert.deepEqual(result, { title: 'ERN Daily Sync', attendees: [], recordingUrl: null, ...summary });
+  assert.deepEqual(result, { title: 'ERN Daily Sync', attendees: [], recordingUrl: null, speakerAttributions: [], ...summary });
   assert.equal(httpPostCalls, 1);
   assert.equal(sleepCalls, 0);
 });
@@ -116,7 +116,7 @@ test('does not call sleep after a successful attempt', async () => {
 
   const result = await client.fetchSummary('meeting-3');
 
-  assert.deepEqual(result, { title: 'ERN Daily Sync', attendees: [], recordingUrl: null, ...summary });
+  assert.deepEqual(result, { title: 'ERN Daily Sync', attendees: [], recordingUrl: null, speakerAttributions: [], ...summary });
   assert.equal(httpPostCalls, 2);
   assert.equal(sleepCalls, 1);
 });

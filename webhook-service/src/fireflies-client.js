@@ -3,7 +3,23 @@ const axios = require('axios');
 const FIREFLIES_URL = 'https://api.fireflies.ai/graphql';
 
 function buildQuery(meetingId) {
-  return `query { transcript(id: "${meetingId}") { title transcript_url meeting_attendees { displayName } summary { action_items overview } } }`;
+  // Feature 7: fetch sentences for speaker attribution (top key-point per speaker)
+  return `query { transcript(id: "${meetingId}") { title transcript_url meeting_attendees { displayName } summary { action_items overview } sentences { speaker_name text } } }`;
+}
+
+// Feature 7: Extract the single most substantive sentence per speaker as an attribution quote.
+// Uses sentence length as a heuristic for substance — longer = more likely to be a decision/insight.
+function extractSpeakerAttributions(sentences) {
+  if (!sentences || sentences.length === 0) return [];
+  const bySpeaker = new Map();
+  for (const { speaker_name, text } of sentences) {
+    if (!speaker_name || !text || text.trim().length < 20) continue;
+    const existing = bySpeaker.get(speaker_name);
+    if (!existing || text.length > existing.length) {
+      bySpeaker.set(speaker_name, text.trim());
+    }
+  }
+  return Array.from(bySpeaker.entries()).map(([speaker, quote]) => ({ speaker, quote }));
 }
 
 function defaultSleep(ms) {
@@ -34,12 +50,15 @@ function createFirefliesClient({
 
       if (summary?.overview) {
         const attendees = (transcript.meeting_attendees ?? []).map((a) => a.displayName);
+        // Feature 7: extract speaker attributions from sentence-level data
+        const speakerAttributions = extractSpeakerAttributions(transcript.sentences ?? []);
         return {
           title: transcript.title,
           attendees,
           overview: summary.overview,
           action_items: summary.action_items,
           recordingUrl: transcript.transcript_url ?? null,
+          speakerAttributions,
         };
       }
 
@@ -54,4 +73,4 @@ function createFirefliesClient({
   return { fetchSummary };
 }
 
-module.exports = { createFirefliesClient };
+module.exports = { createFirefliesClient, extractSpeakerAttributions };

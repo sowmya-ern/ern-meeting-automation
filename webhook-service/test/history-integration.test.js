@@ -20,7 +20,7 @@ test('a real history-consolidator output is accepted as-is by meeting-history.up
   await meetingHistory.upsertSeriesState('BOND_TEAM', { open_items, narrative, lastMeetingId: 'm1' });
 
   assert.equal(upsertCalls.length, 1);
-  assert.deepEqual(upsertCalls[0].body.open_items, [{ text: 'Ship X', assignee: 'A', status: 'open', first_seen: '2026-07-01' }]);
+  assert.deepEqual(upsertCalls[0].body.open_items, [{ text: 'Ship X', assignee: 'A', status: 'open', first_seen: '2026-07-01', carry_over_count: 0 }]);
   assert.equal(upsertCalls[0].body.narrative, 'X is progressing.');
 });
 

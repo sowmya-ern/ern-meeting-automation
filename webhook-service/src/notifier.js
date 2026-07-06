@@ -161,7 +161,12 @@ function createNotifier({ botToken, opsChatId, unroutedChatId, httpPost = defaul
         await send(unroutedChatId, text);
     }
 
-    return { notifySummaryTo, notifyPostMeetingTo, notifyAgendaOverviewTo, notifyTodosTo, notifyOpsFailure, notifyUnrouted, sendPlainText };
+    // Feature 11: send a freeform message to the ops chat (e.g. conflict alerts)
+    async function notifyOpsMessage(text) {
+        await send(opsChatId, escapeHtml(text));
+    }
+
+    return { notifySummaryTo, notifyPostMeetingTo, notifyAgendaOverviewTo, notifyTodosTo, notifyOpsFailure, notifyUnrouted, sendPlainText, notifyOpsMessage };
 }
 
 module.exports = { createNotifier };

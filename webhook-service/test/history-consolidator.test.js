@@ -24,7 +24,7 @@ test('consolidate() sends prior state + this meeting to the Anthropic API and pa
   assert.match(calls[0].body.messages[0].content, /raw overview/);
   assert.match(calls[0].body.messages[0].content, /raw items/);
 
-  assert.deepEqual(result.open_items, [{ text: 'Ship X', assignee: 'A', status: 'open', first_seen: '2026-06-20' }]);
+  assert.deepEqual(result.open_items, [{ text: 'Ship X', assignee: 'A', status: 'open', first_seen: '2026-06-20', carry_over_count: 0 }]);
   assert.equal(result.narrative, 'X is still in progress.');
 });
 

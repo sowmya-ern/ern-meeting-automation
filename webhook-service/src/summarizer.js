@@ -23,18 +23,38 @@ NEXT_STEPS:
 <one or two bullet lines ("- " prefix) naming a broader team-level next step or upcoming milestone; if none is evident from this meeting, output exactly "- None noted this cycle.">`;
 
 function buildPrompt({ title, attendees, overview, action_items }, context = {}) {
-  const { seriesState, company } = context;
+  const { seriesState, company, speakerAttributions, isExternalFacing } = context;
 
   const hasSeriesContext = seriesState && ((seriesState.open_items && seriesState.open_items.length) || seriesState.narrative);
+
+  // Feature 2: Carry-over flagging — annotate items that have been open for 2+ meetings
+  // so the LLM can surface the 🔁 prefix in the ACTION_ITEMS output.
+  const annotatedOpenItems = hasSeriesContext
+    ? (seriesState.open_items ?? []).map((item) => {
+        const isCarryOver = item.carry_over_count && item.carry_over_count >= 2;
+        return isCarryOver ? { ...item, _carry_over_flag: true } : item;
+      })
+    : [];
+
   const seriesBlock = hasSeriesContext
-    ? `\nPrior open items and narrative for this meeting series (for reference only -- you may note an item is recurring, but do not invent detail beyond what's here):\nOpen items:\n${JSON.stringify(seriesState.open_items ?? [], null, 2)}\nNarrative so far:\n${seriesState.narrative ?? ''}\n`
+    ? `\nPrior open items and narrative for this meeting series (for reference only):\nOpen items (items with _carry_over_flag:true have been open for 2+ meetings — prefix those with "🔁 " in ACTION_ITEMS to signal they are recurring carry-overs):\n${JSON.stringify(annotatedOpenItems, null, 2)}\nNarrative so far:\n${seriesState.narrative ?? ''}\n`
     : '';
 
   const profile = company ? getProfile(company) : null;
   const toneLine = profile ? `\nTone for this team: ${profile.tone}.\n` : '';
 
+  // Feature 7: speaker attribution block — only included when sentences data is available
+  const attributionBlock = (speakerAttributions && speakerAttributions.length > 0)
+    ? `\nKey speaker quotes (use these to attribute decisions in SECTIONS bullets where relevant — format: "@Name raised: <quote>"):\n${speakerAttributions.map(({ speaker, quote }) => `- ${speaker}: "${quote}"`).join('\n')}\n`
+    : '';
+
+  // Feature 8: external-safe mode — strip internal friction, valuations, and candid commentary
+  const externalSafeBlock = isExternalFacing
+    ? `\nEXTERNAL-SAFE MODE: This summary will be shared in a channel that includes external partners or vendors. You MUST omit: any mention of internal team friction, disagreements, or personnel issues; any specific valuations, FDV, fundraise amounts, or financial targets; any candid commentary about third parties (investors, partners, competitors); any internal deadlines that have been missed or are at risk. Focus only on decisions made, progress achieved, and next steps agreed. If in doubt, omit it.\n`
+    : '';
+
   return `${RULES}
-${seriesBlock}${toneLine}
+${seriesBlock}${toneLine}${attributionBlock}${externalSafeBlock}
 Meeting: ${title}
 Attendees: ${(attendees ?? []).join(', ')}
 
