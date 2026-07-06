@@ -118,7 +118,8 @@ async function handleFirefliesWebhook({ eventType, meetingId }, { firefliesClien
 
         const chatId = meetingRouter.resolveChatId(summary.title);
         if (!chatId) {
-            await notifier.notifyUnrouted(meetingId, summary.title, summary, company);
+            // Silently drop meetings that don't match a known Bond or ERN series.
+            // Do not send to ops or unrouted chat — only Bond/ERN meetings are in scope.
             return { status: 'unrouted', meetingId };
         }
 

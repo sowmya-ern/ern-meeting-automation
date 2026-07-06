@@ -70,11 +70,11 @@ test('calls notifier.notifyOpsFailure when fetchSummary throws', async () => {
     assert.equal(deps.calls.notifyOpsFailure, 1);
 });
 
-test('calls notifier.notifyUnrouted when no routing rule matches the meeting title', async () => {
+test('silently drops meetings with no routing rule match — no notifyUnrouted, no ops message', async () => {
     const deps = fakeDeps({ summary: { title: 'Random 1:1', overview: 'ov', action_items: 'ai' } });
     const result = await handleFirefliesWebhook({ eventType: 'meeting.summarized', meetingId: 'm5' }, deps);
     assert.equal(result.status, 'unrouted');
-    assert.equal(deps.calls.notifyUnrouted, 1);
+    assert.equal(deps.calls.notifyUnrouted, 0);
     assert.equal(deps.calls.notifyAgendaOverviewTo, 0);
     assert.equal(deps.calls.notifyOpsFailure, 0);
 });
@@ -211,18 +211,17 @@ test('resolves company via the routing table and passes it to the summarizer', a
     assert.equal(summarizerCalledWithCompany, 'BOND');
 });
 
-test('falls back to the content classifier for company when the title has no routing match, but still routes to notifyUnrouted', async () => {
+test('silently drops unrouted meetings even when content classifier guesses a company', async () => {
     const router = createMeetingRouter([{ match: 'ERN Daily Sync', chatId: 'super-team-chat', company: 'ERN' }]);
     const summary = { title: 'Ad Hoc Bond Sync', overview: 'Discussed TVL and RE7 API.', action_items: 'ai' };
     const deps = fakeDeps({ summary, meetingRouter: router });
-    let unroutedCompany;
-    deps.notifier.notifyUnrouted = async (meetingId, title, s, company) => { deps.calls.notifyUnrouted += 1; unroutedCompany = company; };
     const companyClassifier = { classify: () => 'BOND' };
 
     const result = await handleFirefliesWebhook({ eventType: 'meeting.summarized', meetingId: 'm13' }, { ...deps, companyClassifier });
 
     assert.equal(result.status, 'unrouted');
-    assert.equal(unroutedCompany, 'BOND');
+    assert.equal(deps.calls.notifyUnrouted, 0);
+    assert.equal(deps.calls.notifyOpsFailure, 0);
 });
 
 test('a post-meeting send failure is reported to ops and does not crash the pipeline', async () => {

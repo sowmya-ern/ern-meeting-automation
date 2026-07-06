@@ -151,7 +151,7 @@ test('smoke: when the summary never becomes ready, an ops-failure alert fires in
     }
 });
 
-test('smoke: an unrecognized meeting title falls back to the ops chat instead of being dropped', async () => {
+test('smoke: an unrecognized meeting title is silently dropped — no send, no ops alert', async () => {
     const { server, port, calls, processed } = startTestServer({
         fetchSummaryImpl: async () => ({ title: 'Random 1:1', overview: 'ov', action_items: 'ai' }),
     });
@@ -159,8 +159,9 @@ test('smoke: an unrecognized meeting title falls back to the ops chat instead of
         await postWebhook(port, { event: 'meeting.summarized', meeting_id: 'smoke-4' });
         const result = await processed;
         assert.equal(result.status, 'unrouted');
-        assert.equal(calls.notifyUnrouted.length, 1);
+        assert.equal(calls.notifyUnrouted.length, 0);
         assert.equal(calls.notifyAgendaOverviewTo.length, 0);
+        assert.equal(calls.notifyOpsFailure.length, 0);
     } finally {
         server.close();
     }
@@ -200,7 +201,7 @@ test('smoke: a relay request with an unknown chatKey is rejected with 400 and ne
     }
 });
 
-test('smoke: an unrecognized title still gets a company guess from content when passed a companyClassifier', async () => {
+test('smoke: an unrecognized title is silently dropped even when a companyClassifier is provided', async () => {
     const calls = { notifyAgendaOverviewTo: [], notifyTodosTo: [], notifyOpsFailure: [], notifyUnrouted: [], sendPlainText: [] };
     const firefliesClient = {
         fetchSummary: async () => ({ title: 'Ad Hoc Sync', overview: 'Discussed TVL and RE7 API updates.', action_items: 'ai' }),
@@ -210,6 +211,7 @@ test('smoke: an unrecognized title still gets a company guess from content when 
         notifyTodosTo: async () => {},
         notifyOpsFailure: async () => {},
         notifyUnrouted: async (meetingId, title, summary, company) => { calls.notifyUnrouted.push({ company }); },
+        notifyPostMeetingTo: async () => {},
         sendPlainText: async () => {},
     };
     const meetingRouter = createMeetingRouter([{ match: ROUTED_TITLE, chatId: 'super-team-chat', company: 'ERN' }]);
@@ -229,8 +231,8 @@ test('smoke: an unrecognized title still gets a company guess from content when 
     try {
         await postWebhook(port, { event: 'meeting.summarized', meeting_id: 'smoke-classify' });
         await processed;
-        assert.equal(calls.notifyUnrouted.length, 1);
-        assert.equal(calls.notifyUnrouted[0].company, 'BOND');
+        assert.equal(calls.notifyUnrouted.length, 0);
+        assert.equal(calls.notifyOpsFailure.length, 0);
     } finally {
         server.close();
     }
