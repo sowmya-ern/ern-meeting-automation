@@ -13,8 +13,10 @@ function buildRoutingRules(env) {
     { match: 'BOND Daily Standup', chatId: env.TELEGRAM_CHAT_BOND_TEAM, seriesKey: 'BOND_TEAM', company: 'BOND' },
     { match: 'Bond', chatId: env.TELEGRAM_CHAT_BOND_TEAM, seriesKey: 'BOND_TEAM', company: 'BOND' },
     { match: 'ERN Daily Executive Standup', chatId: env.TELEGRAM_CHAT_ERN_EXEC_STANDUP, seriesKey: 'ERN_EXEC_STANDUP', company: 'ERN' },
-    { match: 'ERN <> Nebula', chatId: env.TELEGRAM_CHAT_ERN_SUPER_TEAM, seriesKey: 'ERN_SUPER_TEAM', company: 'ERN' },
+    { match: 'ERN <> Nebula', chatId: env.TELEGRAM_CHAT_ERN_NEBULA, seriesKey: 'ERN_NEBULA', company: 'ERN' },
     { match: 'ERN Daily Sync', chatId: env.TELEGRAM_CHAT_ERN_SUPER_TEAM, seriesKey: 'ERN_SUPER_TEAM', company: 'ERN' },
+    { match: 'ERN Catchup', chatId: env.TELEGRAM_CHAT_ERN_SUPER_TEAM, seriesKey: 'ERN_SUPER_TEAM', company: 'ERN' },
+    { match: 'ERN', chatId: env.TELEGRAM_CHAT_ERN_SUPER_TEAM, seriesKey: 'ERN_SUPER_TEAM', company: 'ERN' },
   ];
 }
 
