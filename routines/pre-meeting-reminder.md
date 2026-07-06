@@ -19,7 +19,7 @@ Use this with the `/schedule` skill (or claude.ai/code/routines) to create the h
 You are an automated operations assistant. Your task is to trigger pre-meeting reminders.
 
 1. Use the Google Calendar MCP tool to list all events for today and tomorrow.
-2. Filter to events starting between 11 and 13 hours from right now (approximates "at least 12
+2. Filter to events starting between 5 and 7 hours from right now (approximates "at least 6
    hours before" with enough width that an hourly cadence can't miss it on drift).
 3. For each matching event, check its description for the marker "[reminder-sent]".
    - If present, skip it — a reminder already went out for this event.
@@ -48,10 +48,10 @@ You are an automated operations assistant. Your task is to trigger pre-meeting r
 7. If there are no matching events, do nothing and exit successfully.
 ```
 
-## Why the window is 11-13h, not 12h exactly
+## Why the window is 5-7h, not 6h exactly
 
 A 1-hour-wide window matched to an hourly cadence has zero tolerance for a routine firing a
-few minutes late — a meeting can slip through uncaught. An 11-13h-wide window guarantees any
+few minutes late — a meeting can slip through uncaught. A 5-7h-wide window guarantees any
 given meeting is caught in at least one run even with some drift, while still landing close to
-the "at least 12 hours before" target, at the cost of needing the idempotency marker in step 3/6
+the "6 hours before" target, at the cost of needing the idempotency marker in step 3/6
 to avoid duplicate sends across the runs where it's caught twice.
