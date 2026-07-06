@@ -111,7 +111,81 @@ function createSummarizer({ apiKey, model = 'claude-sonnet-5', maxTokens = 1024,
     return parseResponse(text);
   }
 
-  return { simplify };
+  async function generatePreMeetingReminder({ title, description, attendees, seriesState }) {
+    const RULES = `You are generating a Pre-Meeting Reminder for a Telegram group chat.
+The output MUST be exactly this format (do not use MarkdownV2 escaping, just plain text with emojis):
+
+⏰ <Meeting Title> — Pre-Meeting Reminder
+<@handles of attendees>
+Sending ahead of today's call. Please come prepared on the following:
+
+📌 <@handle 1>
+• <Action item 1 from history>
+• <Action item 2 from history>
+
+📌 <@handle 2>
+• <Action item 1 from history>
+
+📎 Please review before joining
+• <Any links or docs mentioned in the description or history>
+
+🕐 See you on the call. Reply here if you can't make it.
+
+Rules:
+1. Group action items by assignee using their @handle (or name if no handle).
+2. Use the provided attendee list to know who is expected.
+3. If seriesState is provided, use the open_items to populate the assignee lists.
+4. Keep bullets short and actionable.
+5. If there are no open items, derive topics from the description.
+6. Do NOT invent items.
+7. Use the exact emojis shown.`;
+
+    const openItemsJson = seriesState?.open_items ? JSON.stringify(seriesState.open_items) : 'None';
+    const narrative = seriesState?.narrative || 'None';
+    
+    const prompt = `${RULES}
+
+Meeting Title: ${title}
+Attendees: ${attendees.join(', ')}
+Description: ${description}
+Prior Open Items: ${openItemsJson}
+Prior Narrative: ${narrative}`;
+
+    const response = await httpPost(
+      ANTHROPIC_URL,
+      {
+        model,
+        max_tokens: maxTokens,
+        temperature: 0,
+        messages: [{ role: 'user', content: prompt }],
+      },
+      {
+        headers: {
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+          'content-type': 'application/json',
+        },
+      }
+    );
+
+    const text = response?.data?.content?.[0]?.text;
+    if (!text) throw new Error('LLM returned empty response for pre-meeting reminder');
+    
+    // Use attendee-handles to replace names with handles in the generated text
+    const { handleFor } = require('./attendee-handles');
+    // Simple replacement for known names that might appear without handles
+    let final = text;
+    attendees.forEach(name => {
+      const handle = handleFor(name);
+      if (handle !== name) {
+        final = final.replace(new RegExp(name, 'g'), handle);
+      }
+    });
+    
+    return final;
+  }
+
+  return { simplify, generatePreMeetingReminder };
 }
 
 module.exports = { createSummarizer };

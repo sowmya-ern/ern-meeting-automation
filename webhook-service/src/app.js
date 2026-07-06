@@ -44,6 +44,45 @@ function createApp({ secret, relaySecret, firefliesClient, notifier, seenMeeting
         res.status(200).send('OK');
     });
 
+    // New relay endpoint that generates the per-person reminder from meeting history
+    app.post('/relay/telegram-agenda-generate', async (req, res) => {
+        const authentic = verifyRelayToken({ secret: relaySecret, authHeader: req.headers['authorization'] });
+        if (!authentic) return res.status(401).send('Unauthorized');
+
+        const { chatKey, title, description, attendees } = req.body ?? {};
+        const chatId = resolveRelayChatId(relayChatMap, chatKey);
+        if (!chatId || !title) return res.status(400).send('chatKey and title must be present');
+
+        try {
+            // 1. Resolve seriesKey from title
+            const route = meetingRouter.routeMeeting(title);
+            const seriesKey = route ? route.seriesKey : title;
+
+            // 2. Fetch history
+            let seriesState = null;
+            try {
+                seriesState = await meetingHistory.getSeriesState(seriesKey);
+            } catch (err) {
+                console.error(`Failed to fetch history for pre-meeting reminder (${seriesKey}):`, err.message);
+            }
+
+            // 3. Generate reminder text using summarizer
+            const text = await summarizer.generatePreMeetingReminder({
+                title,
+                description: description || '',
+                attendees: attendees || [],
+                seriesState
+            });
+
+            // 4. Send
+            await notifier.sendPlainText(chatId, text);
+            res.status(200).send('OK');
+        } catch (err) {
+            console.error('Failed to generate/send pre-meeting reminder:', err);
+            res.status(500).send('Internal Server Error');
+        }
+    });
+
     return app;
 }
 
