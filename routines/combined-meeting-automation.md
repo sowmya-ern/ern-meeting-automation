@@ -56,7 +56,7 @@ You are an automated operations assistant for ERN and Bond. You run every 30 min
 
 6. Write and execute a Python script to send the agenda to the resolved Telegram chat ID:
    import requests, os
-   TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "<TOKEN>")
+   TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "8801692679:AAGiCNOlV_APZ7ZCtSbNa0j1B6f9FPyLBBs")
    requests.post(f"https://api.telegram.org/bot{TOKEN}/sendMessage", json={
        "chat_id": <chat_id>,
        "text": "<agenda text>",
