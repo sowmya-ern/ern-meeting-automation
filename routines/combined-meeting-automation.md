@@ -9,15 +9,15 @@ Runs every 30 minutes. Handles both pre-meeting agendas and post-meeting summari
 
 | Meeting Title Contains | Telegram Chat ID |
 |---|---|
-| Bond <> Nebula | -1002242183749 |
-| Bond <> 0g Weekly Sync | -1002161229410 |
-| BOND Daily Standup | -1002161229410 |
-| Bond | -1002161229410 |
-| ERN Daily Executive Standup | -1002161229410 |
-| ERN <> Nebula | -1002242183749 |
-| ERN Daily Sync | -1002242183749 |
-| ERN Catchup | -1002242183749 |
-| ERN | -1002242183749 |
+| Bond <> Nebula | -1003984323489 |
+| Bond <> 0g Weekly Sync | -1003984323489 |
+| BOND Daily Standup | -1003984323489 |
+| Bond | -1003984323489 |
+| ERN Daily Executive Standup | -1003984323489 |
+| ERN <> Nebula | -1003984323489 |
+| ERN Daily Sync | -1003984323489 |
+| ERN Catchup | -1003984323489 |
+| ERN | -1003984323489 |
 | No match | Skip — do not send |
 
 ## Telegram Handle Mapping
