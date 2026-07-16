@@ -1,0 +1,96 @@
+== ERN DAILY SYNC (13 Jul) ==
+Vinson:
+- Share the approved new investor blurb and clarify the investor update process
+- Lead the VC feedback review call at 2:30 PM GST and action the feedback received
+- Schedule and conduct a detailed call with Sowmya to review automation progress and unblock delays
+- Create a prioritized task list for the Cosmic team's pending fundraising-related items, including assignment dates
+- Message Nebula content manager Fur and Bonfire to discuss urgent pivot in marketing strategy due to low engagement
+- Coordinate with Sowmya to truncate VC feedback call and add bond project discussion before and after as needed
+- Oversee overall company focus realignment on fundraising as the primary objective
+
+Hoa:
+- Send updated email signatures for the team after Sowmya completes the simplified version
+- Follow up with Rob and Jonathan on pending deliverables related to app development and technical specifications
+- Confirm attendance and scheduling of bond daily standup meeting in coordination with team travel plans
+- Provide accurate traffic and marketing metrics for Bond website to assist pivot discussion
+- Assist Sowmya in sharing payment updates and coordinate further internal communications
+
+Sowmya:
+- Finalize and send professional, simplified email signature within 15 minutes today
+- Organize collected VC feedback in Excel and prepare for VC feedback call
+- Coordinate with Vinson for automation review session and provide progress updates
+- Handover completed app UI/UX zip file to Rob and support Will with ongoing UI/UX improvements
+- Prepare and share strategic overview and LinkTree updates focused on fundraising progress
+- Adjust call durations on VC and bond meetings to enable effective combined discussions
+
+== VC FEEDBACK CALL (13 Jul) ==
+Vinson:
+- Consolidate all summarized feedback and issues from the team and communicate them clearly to Tower and Zero G teams
+- Review and adjust the shared documents for Tower, ensuring clarity on staffing needs and product issues
+- Follow up to verify accurate and updated LP tracker status and ensure communication dates and commitments are documented
+- Confirm with Hoa and Sowmya incorporation of VC feedback into separate documents, ensuring all questions and concerns are clearly compiled
+- Oversee migration of all critical operational files to shared drives by end of week, coordinating with Hoa and Sowmya
+
+Sowmya:
+- Input bugs and feedback continuously into the shared document during meetings for accurate tracking
+- Share the Neobank execution checklist with Vinson and the broader team
+- Move all operational files from personal drives to the shared folder by end of week
+- Separate combined VC feedback into distinct individual feedback documents for clarity and precise follow-up
+- Provide detailed answers to VC queries in a separate list to assist in investor communications
+
+Hoa:
+- Add detailed context about missed meetings and communication lapses with Red to the shared document
+- Follow up with Zero G IT contact (Michael) to resolve DNS, SEO, and email spamming issues, and report progress in the Wednesday Zero G meeting
+- Share detailed LP tracker CRM with Vinson and conduct live review to confirm up-to-date data
+- Assist Sowmya in consolidating and moving files from personal drives to shared locations
+
+== ERN DAILY EXECUTIVE STANDUP (13 Jul) ==
+Jonathan:
+- Prioritize and complete overdue promotional videos for Zambia Trade and Mobile Forensics, providing status updates on order of completion
+- Remove Celentra project and related videos permanently from the agenda to focus resources
+- Coordinate providing peptides contact (Jack) details to Vinson for local distribution discussions
+- Assist in locating or remaking the Eclipse 11 video for promotional use as the master file is missing
+- Support press release preparation and assist in securing Assurance's inclusion in announcements; finalize MOU draft by Wednesday
+- Handle disposal or slimming down of Jared's X2 project and assess its future viability
+- Lead stealth rebranding and social media cleanup for Cosmic, focusing marketing efforts on Earn project
+- Review beta app engineering plan, diagnostic points, and planned feature roadmap for presentation in upcoming call
+- Liaise with Chris regarding enabling eSIM capabilities in beta accounts for app testing
+- Delegate UX/UI app review primarily to Rob Christensen unless critical issues arise
+- Provide updates on Earn and Spider project dependence and progress in follow-up meetings
+- Provide Jack's contact information to Rob Christensen and Vinson Leow for peptides distribution discussions
+
+Vinson:
+- Reschedule tomorrow's meeting 30 minutes earlier and remove Jared and Jonathan from unnecessary calls on Monday, Wednesday, and Thursday; maintain only Tuesday and Friday meetings
+- Prepare presentation for Cosmic's marketing repositioning and stealth plan for upcoming company launch
+- Follow up on the Nebula marketing agency 6.5K invoice payment and ensure proper Fiat payment setup
+- Coordinate with Rob Christensen to schedule meeting availability with Jared for critical upcoming engagements
+- Share availability calendar with Rob Christensen for coordinating meetings with Jared and others
+- Prioritize the fundraising raise as the company's main objective and communicate this clearly to the team
+
+Rob:
+- Confirm attendance and availability of team members, particularly Jared and Kelly, for scheduling calls; aim to solidify Tuesday and Friday meetings with no conflicts
+- Search for Eclipse 11 video file; coordinate with Nick or Will to obtain or recreate it
+- Follow up with Kelly on reviewing the GSR contract executed July 8 to finalize agreements
+- Assist with invoice approval process for Nebula marketing agency payments
+- Forward Jack's contact details to Vinson once received from Jonathan
+- Support UX/UI review for the app and communicate with Jonathan on any critical needs
+- Facilitate meeting scheduling for Vinson and Jared from Tuesday to Thursday, coordinating times in PT
+
+== VINNY/HOA DAILY SYNC (13 Jul) ==
+Hoa:
+- Consult with Vinson and T before sharing GA data insights with Zero G to ensure appropriate communication
+- Send Swap and Lend public beta test guide to Vinson for coordination of testing activities
+- Confirm with Red the procedure for handling bug feedback, AI review process, and post-fix testing cycles to clarify testing workflow
+- Share the six-week Perps scoping plan link with Vinson and the group for reference and alignment on project timelines
+
+Vinson and team:
+- Define clear product scaling plans and clarify PR ownership and marketing budget to align marketing efforts and responsibilities
+- Initiate a new testing round after liquidity injection confirmation to ensure fixes are validated and system stability
+
+Vinson:
+- Incorporate combined notes for timelines, goals, and staffing to align project direction and resolve current misalignments
+- Schedule and conduct bug testing session with Hoa and Song to address current issues and validate fixes
+- Discuss project progress and next steps with the team, ensuring concrete deliverables and measurable on-chain results to overcome stalled progress
+
+Vinson and Hoa:
+- Finalize and update the marketing section in the combined project notes to clarify marketing/PR timelines and responsibilities
